@@ -1,46 +1,62 @@
 {
-	"name": "lsp-sample",
-	"description": "A language server example",
-	"author": "Microsoft Corporation",
+	"name": "meerkat",
+	"displayName": "meerkat",
+	"description": "Suricata/Snort VSCode extenssion",
+	"author": "Tsvetomir Hristov",
 	"license": "MIT",
-	"version": "1.0.0",
-	"repository": {
-		"type": "git",
-		"url": "https://github.com/Microsoft/vscode-extension-samples"
-	},
-	"publisher": "vscode-samples",
-	"categories": [],
+	"version": "0.1.0",
 	"keywords": [
-		"multi-root ready"
+		"lsp",
+		"vscode extenssion",
+		"language support"
 	],
 	"engines": {
-		"vscode": "^1.63.0"
+		"vscode": "^1.71.0"
 	},
 	"activationEvents": [
-		"onLanguage:plaintext"
+		"onLanguage:suricata"
 	],
 	"main": "./client/out/extension",
 	"contributes": {
 		"configuration": {
-			"type": "object",
-			"title": "Example configuration",
+			"title": "Meerkat",
 			"properties": {
-				"languageServerExample.maxNumberOfProblems": {
-					"scope": "resource",
-					"type": "number",
-					"default": 100,
-					"description": "Controls the maximum number of problems produced by the server."
+				"meerkat.formatActiveLineOnly": {
+					"type": "boolean",
+					"default": true,
+					"description": "The formatter will only format the rule on the actively selected line."
 				},
-				"languageServerExample.trace.server": {
-					"scope": "window",
-					"type": "string",
-					"enum": [
-						"off",
-						"messages",
-						"verbose"
-					],
-					"default": "off",
-					"description": "Traces the communication between VS Code and the language server."
+				"meerkat.formatSpaceAfterOption": {
+					"type": "boolean",
+					"default": true,
+					"description": "Put a space after every option.",
+					"examples": [
+						"True: ... (msg:\"(...)\"; flow:stateless; (...))",
+						"False: ... (msg:\"(...)\";flow:stateless;(...))"
+					]
+				},
+				"meerkat.formatSpaceAfterLastOption": {
+					"type": "boolean",
+					"default": false,
+					"description": "Put a space after the last option.",
+					"examples": [
+						"True: ... ((...); flow:stateless; )",
+						"False: ... ((...); flow:stateless;)"
+					]
+				},
+				"meerkat.formatSpaceAfterSemicolomnInOption": {
+					"type": "boolean",
+					"default": false,
+					"description": "Put a space after the semicolumn inside options.",
+					"examples": [
+						"True: ... (msg: \"(...)\"; flow:stateless; (...))",
+						"False: ... (msg: \"(...)\"; flow: stateless; (...))"
+					]
+				},
+				"meerkat.formatCurrentRuleOnly": {
+					"type": "boolean",
+					"default": true,
+					"description": "Format only the selected rule"
 				}
 			}
 		}
