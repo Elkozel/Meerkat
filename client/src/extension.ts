@@ -4,9 +4,10 @@
  * ------------------------------------------------------------------------------------------ */
 
 import * as path from 'path';
-import { workspace, ExtensionContext } from 'vscode';
+import { workspace, ExtensionContext, window, commands } from 'vscode';
 
 import {
+	Executable,
 	LanguageClient,
 	LanguageClientOptions,
 	ServerOptions,
@@ -16,44 +17,43 @@ import {
 let client: LanguageClient;
 
 export function activate(context: ExtensionContext) {
-	// The server is implemented in node
-	const serverModule = context.asAbsolutePath(
-		path.join('server', 'out', 'server.js')
-	);
-	// The debug options for the server
-	// --inspect=6009: runs the server in Node's Inspector mode so VS Code can attach to the server for debugging
-	const debugOptions = { execArgv: ['--nolazy', '--inspect=6009'] };
+	let hello = commands.registerCommand("meerkat.hello", async () => {
+		window.showInformationMessage("Meerkat is here!");
+	});
+  
+	context.subscriptions.push( hello);
 
+	const traceOutputChannel = window.createOutputChannel("Meerkat Language Server trace");
+	const command = process.env.SERVER_PATH || "/home/togo/Desktop/Projects/meercat/target/release/meerkat";
+	const run: Executable = {
+		command,
+		options: {
+			env: {
+				...process.env, 
+				// eslint-disable-next-line @typescript-eslint/naming-convention
+				RUST_LOG: "debug",
+			},
+		},
+	};
+	const serverOptions: ServerOptions = {
+		run,
+		debug: run,
+	};
 	// If the extension is launched in debug mode then the debug server options are used
 	// Otherwise the run options are used
-	const serverOptions: ServerOptions = {
-		run: { module: serverModule, transport: TransportKind.ipc },
-		debug: {
-			module: serverModule,
-			transport: TransportKind.ipc,
-			options: debugOptions
-		}
-	};
-
 	// Options to control the language client
-	const clientOptions: LanguageClientOptions = {
+	let clientOptions: LanguageClientOptions = {
 		// Register the server for plain text documents
-		documentSelector: [{ scheme: 'file', language: 'plaintext' }],
+		documentSelector: [{ scheme: "file", language: "nrs" }],
 		synchronize: {
 			// Notify the server about file changes to '.clientrc files contained in the workspace
-			fileEvents: workspace.createFileSystemWatcher('**/.clientrc')
-		}
+			fileEvents: workspace.createFileSystemWatcher("**/.clientrc"),
+		},
+		traceOutputChannel,
 	};
 
 	// Create the language client and start the client.
-	client = new LanguageClient(
-		'languageServerExample',
-		'Language Server Example',
-		serverOptions,
-		clientOptions
-	);
-
-	// Start the client. This will also launch the server
+	client = new LanguageClient("nrs-language-server", "nrs language server", serverOptions, clientOptions);
 	client.start();
 }
 

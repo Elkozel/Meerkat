@@ -52,14 +52,16 @@
 						"True: ... (msg: \"(...)\"; flow:stateless; (...))",
 						"False: ... (msg: \"(...)\"; flow: stateless; (...))"
 					]
-				},
-				"meerkat.formatCurrentRuleOnly": {
-					"type": "boolean",
-					"default": true,
-					"description": "Format only the selected rule"
 				}
 			}
-		}
+		},
+		"commands": [
+			{
+				"title": "Say hi to Meerkat",
+				"command": "meerkat.hello",
+				"shortTitle": "Meerkat: Hello world!"
+			}
+		]
 	},
 	"scripts": {
 		"vscode:prepublish": "npm run compile",
