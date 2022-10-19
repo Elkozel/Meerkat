@@ -1,13 +1,45 @@
 use chumsky::prelude::*;
-use std::net::IpAddr::V4;
 use std::net::Ipv4Addr;
+use std::{net::IpAddr::V4, ops::Range};
 
-use crate::rule::{Header, NetworkAddress, NetworkDirection, NetworkPort, Option, Rule};
+use crate::rule::{AST, Rule, Spanned, Span, Header, RuleOption, NetworkPort, NetworkAddress, NetworkDirection};
+
+#[derive(Debug)]
+pub struct ImCompleteSemanticToken {
+    pub start: usize,
+    pub length: usize,
+    pub token_type: usize,
+}
+
+impl AST {
+    pub fn parser() -> impl Parser<char, AST, Error = Simple<char>> {
+        let rule = Rule::parser().map(|rule| Some(rule));
+        let commented = just("#").ignore_then(text::newline()).map(|_| None);
+
+        rule.or(commented)
+            .separated_by(text::newline().or(text::whitespace()))
+            .allow_trailing()
+            .allow_leading()
+            .map(|rules| {
+                let mut all_rules = vec![];
+                collect_all(rules, &mut all_rules);
+                AST { rules: all_rules }
+            })
+    }
+}
+fn collect_all(rules: Vec<Option<(Rule, Range<usize>)>>, ret_arr: &mut Vec<Spanned<Rule>>) {
+    rules.iter().for_each(|rule| match rule {
+        Some(rule) => ret_arr.push(rule.clone()),
+        None => (),
+    })
+}
 
 impl Rule {
-    pub fn parser() -> impl Parser<char, Rule, Error = Simple<char>> {
-        let action = text::ident().padded();
-        let options = Option::parser()
+    pub fn parser() -> impl Parser<char, (Rule, Span), Error = Simple<char>> {
+        let action = text::ident()
+            .padded()
+            .map_with_span(|action, span| (action, span));
+        let options = RuleOption::parser()
             .separated_by(just(";"))
             .allow_trailing()
             .delimited_by(just("("), just(")"))
@@ -16,78 +48,109 @@ impl Rule {
         action
             .then(Header::parser().padded())
             .then(options)
-            .map(|((action, header), options)| Rule {
-                action: action,
-                header: header,
-                options: options,
+            .map_with_span(|((action, header), options), span| {
+                (
+                    Rule {
+                        action: action,
+                        header: header,
+                        options: options,
+                    },
+                    span,
+                )
             })
     }
 }
 
 impl Header {
-    fn parser() -> impl Parser<char, Header, Error = Simple<char>> {
-        let protocol = text::ident();
+    fn parser() -> impl Parser<char, (Header, Span), Error = Simple<char>> {
+        let protocol = text::ident().map_with_span(|protocol, span| (protocol, span));
+        let address_port_combined = NetworkAddress::parser()
+            .padded()
+            .then(NetworkPort::parser().padded());
+
+        let address_port_combined2 = NetworkAddress::parser()
+            .padded()
+            .then(NetworkPort::parser().padded());
 
         protocol
-            .then(NetworkAddress::parser().padded())
-            .then(NetworkPort::parser().padded())
+            .then(address_port_combined)
             .then(NetworkDirection::parser().padded())
-            .then(NetworkAddress::parser().padded())
-            .then(NetworkPort::parser().padded())
-            .map(
-                |(
-                    ((((protocol, source), source_port), direction), destination),
-                    destination_port,
-                )| Header {
-                    protocol,
-                    source,
-                    source_port,
-                    direction,
-                    destination,
-                    destination_port,
-                },
-            )
+            .then(address_port_combined2)
+            .map_with_span(|(((protocol, source), direction), destination), span| {
+                (
+                    Header {
+                        protocol: protocol,
+                        source: source.0,
+                        source_port: source.1,
+                        direction: direction,
+                        destination: destination.0,
+                        destination_port: destination.1,
+                    },
+                    span,
+                )
+            })
     }
 }
 
 impl NetworkAddress {
-    fn parser() -> impl Parser<char, NetworkAddress, Error = Simple<char>> {
+    fn parser() -> impl Parser<char, (NetworkAddress, Span), Error = Simple<char>> {
         recursive(|ipaddress| {
-            let digit = text::int(10).map(|int: String| {
-                if (int.parse::<u128>().unwrap()) < 255 {
-                    int.parse::<u8>().unwrap()
-                } else {
-                    0 as u8
-                }
+            let digit = text::int(10).try_map(|int: String, span: Span| {
+                int.parse::<u8>().map_err(|e| {
+                    Simple::custom(
+                        span,
+                        format!(
+                            "Every digit of the IP address should be less than 255 (Err: {})",
+                            e
+                        ),
+                    )
+                })
             });
 
-            let any = just("any").map(|_| NetworkAddress::Any);
+            let any = just("any").map_with_span(|_, span| (NetworkAddress::Any, span));
             // Simple IP address
             let ipv4 = digit
                 .separated_by(just("."))
                 .exactly(4)
-                .map(|a| NetworkAddress::IPAddr(V4(Ipv4Addr::new(a[0], a[1], a[2], a[3]))));
+                .map_with_span(|ip, span| {
+                    (
+                        NetworkAddress::IPAddr((
+                            V4(Ipv4Addr::new(ip[0], ip[1], ip[2], ip[3])),
+                            span.clone(),
+                        )),
+                        span,
+                    )
+                });
             // CIDR IP Address
             let cidr = ipv4
                 .then_ignore(just("/"))
-                .then(digit)
-                .map(|(ip, mask)| match ip {
-                    NetworkAddress::IPAddr(ip) => NetworkAddress::CIDR(ip, mask.into()),
-                    _ => NetworkAddress::Any, // This should never happen
+                .then(
+                    text::int(10)
+                        .map_with_span(|mask: String, span| (mask.parse::<u16>().unwrap(), span)),
+                )
+                .try_map(|(ip, mask), span| match ip.0 {
+                    NetworkAddress::IPAddr(ip) => Ok((NetworkAddress::CIDR(ip, mask), span)),
+                    _ => Err(Simple::custom(
+                        span,
+                        "CIDR needs a valid IP, if you see this error, please report it :)",
+                    )),
                 });
             // IP Group
             let ip_group = ipaddress
                 .separated_by(just(","))
                 .delimited_by(just("["), just("]"))
-                .map(|ips| NetworkAddress::IPGroup(ips));
+                .map_with_span(|ips, span| (NetworkAddress::IPGroup(ips), span));
             // Negated port: !5
             let negated_ip = just("!")
                 .then(ipv4.or(ip_group.clone()))
-                .map(|(_, ip)| NetworkAddress::NegIP(Box::new(ip)));
+                .map_with_span(|(_, ip), span| (NetworkAddress::NegIP(Box::new(ip)), span));
 
-            let ip_variable = just("$")
-                .then(text::ident())
-                .map(|(_, name)| NetworkAddress::IPVariable(name));
+            let ip_variable =
+                just("$")
+                    .then(text::ident())
+                    .map_with_span(|(_, name), span: Range<usize>| {
+                        (NetworkAddress::IPVariable((name, span.clone())), span)
+                    });
 
             ip_variable
                 .or(negated_ip)
@@ -101,32 +164,56 @@ impl NetworkAddress {
 }
 
 impl NetworkPort {
-    fn parser() -> impl Parser<char, NetworkPort, Error = Simple<char>> {
+    fn parser() -> impl Parser<char, (NetworkPort, Span), Error = Simple<char>> {
         recursive(|port| {
-            let any = just("any").map(|_| NetworkPort::Any);
+            let number = text::int(10).try_map(|num: String, span: Span| {
+                Ok((
+                    num.parse::<u16>()
+                        .map_err(|e| Simple::<char>::custom(span.clone(), format!("{}", e)))
+                        .unwrap(),
+                    span,
+                ))
+            });
+            let any = just("any").map_with_span(|_, span| (NetworkPort::Any, span));
             // Just a number
-            let port_number = text::int(10)
-                .map(|s: String| NetworkPort::Port(s.parse().unwrap()))
+            let port_number = number
+                .map(|(port, span)| (NetworkPort::Port(port), span))
                 .padded();
             // Port range: 1:32
-            let port_range = text::int(10).or_not()
+            let port_range = number
+                .or_not()
                 .then_ignore(just(":"))
-                .then(text::int(10).or_not())
-                .try_map(|a:(std::option::Option<String>, std::option::Option<String>), span|match a {
-                    (None, None) => Err(Simple::custom(span, "Port range cannot be \":\"")),
-                    (None, Some(port)) => Ok(NetworkPort::PortOpenRange(port.parse().unwrap(), false)),
-                    (Some(port), None) => Ok(NetworkPort::PortOpenRange(port.parse().unwrap(), false)),
-                    (Some(port_from), Some(port_to)) => Ok(NetworkPort::PortRange(port_from.parse().unwrap(), port_to.parse().unwrap())),
-                });
+                .then(number.or_not())
+                .try_map(
+                    |a: (
+                        std::option::Option<(u16, Span)>,
+                        std::option::Option<(u16, Span)>,
+                    ),
+                     span| match a {
+                        (None, None) => Err(Simple::custom(span, "Port range cannot be \":\"")),
+                        (None, Some((port, span))) => Ok((
+                            NetworkPort::PortOpenRange((port, span.clone()), false),
+                            span,
+                        )),
+                        (Some((port, span)), None) => Ok((
+                            NetworkPort::PortOpenRange((port, span.clone()), false),
+                            span,
+                        )),
+                        (Some((port_from, span_from)), Some((port_to, span_to))) => Ok((
+                            NetworkPort::PortRange((port_from, span_from), (port_to, span_to)),
+                            span,
+                        )),
+                    },
+                );
             // Port group: [1,2,3]
             let port_group = port
                 .separated_by(just(","))
                 .delimited_by(just("["), just("]"))
-                .map(|ports| NetworkPort::PortGroup(ports));
+                .map_with_span(|ports, span| (NetworkPort::PortGroup(ports), span));
             // Negated port: !5
             let negated_port = just("!")
                 .then(port_number.or(port_range).or(port_group.clone()))
-                .map(|(_, ports)| NetworkPort::NegPort(Box::new(ports)));
+                .map_with_span(|(_, ports), span| (NetworkPort::NegPort(Box::new(ports)), span));
 
             negated_port
                 .or(port_group)
@@ -139,37 +226,45 @@ impl NetworkPort {
 }
 
 impl NetworkDirection {
-    fn parser() -> impl Parser<char, NetworkDirection, Error = Simple<char>> {
+    fn parser() -> impl Parser<char, (NetworkDirection, Span), Error = Simple<char>> {
         just("->")
             .or(just("<>"))
             .or(just("<-"))
-            .map(|dir| match dir {
-                "->" => NetworkDirection::SrcToDst,
-                "<>" => NetworkDirection::Both,
-                "<-" => NetworkDirection::DstToSrc,
-                el => NetworkDirection::Unrecognized(el.to_string()),
+            .map_with_span(|dir, span| match dir {
+                "->" => (NetworkDirection::SrcToDst, span),
+                "<>" => (NetworkDirection::Both, span),
+                "<-" => (NetworkDirection::DstToSrc, span),
+                el => (NetworkDirection::Unrecognized(el.to_string()), span),
             })
     }
 }
 
-impl Option {
-    fn parser() -> impl Parser<char, Option, Error = Simple<char>> {
+impl RuleOption {
+    fn parser() -> impl Parser<char, (RuleOption, Span), Error = Simple<char>> {
         let escaped_chars = one_of("\";").delimited_by(just("\\"), empty());
-        let unescaped_value = escaped_chars.or(none_of(";,")).repeated()
-            .collect::<String>();
+        let unescaped_value = escaped_chars
+            .or(none_of(";,"))
+            .repeated()
+            .collect::<String>()
+            .map_with_span(|options, span| (options, span));
 
-        let keyword_pair = text::ident()
+        let keyword = text::ident()
+            .padded()
+            .map_with_span(|keyword, span| (keyword, span));
+
+        let keyword_pair = keyword
             .padded()
             .then_ignore(just(":"))
             .then(unescaped_value.padded().separated_by(just(",")))
-            .map(|(keyword, options)| Option::KeywordPair(keyword, options));
-
-        let buffer = text::ident()
             .padded()
-            .map(|keyword| Option::Buffer(keyword));
+            .map_with_span(|(keyword, options), span| {
+                (RuleOption::KeywordPair(keyword, options), span)
+            });
 
-        keyword_pair
-            .or(buffer)
+        let buffer = keyword
             .padded()
+            .map_with_span(|buffer, span| (RuleOption::Buffer(buffer), span));
+
+        keyword_pair.or(buffer)
     }
 }
