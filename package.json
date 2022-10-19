@@ -62,6 +62,17 @@
 				"shortTitle": "Meerkat: Hello world!"
 			}
 		]
+		,"languages": [{
+			"id": "suricata",
+			"aliases": [
+				"Suricata",
+				"suricata"
+			],
+			"extensions": [
+				"rules"
+			],
+			"configuration": "./language-configuration.json"
+		}]
 	},
 	"scripts": {
 		"vscode:prepublish": "npm run compile",

@@ -1,21 +1,26 @@
-use std::collections::{HashMap, HashSet};
+use std::collections::{HashMap};
 
+use chumsky::Parser;
 use dashmap::DashMap;
-use meerkat::rule::Rule;
-use meerkat::rule::Rule;
+use meerkat::completion::{Keyword, completion};
+use meerkat::parser::ImCompleteSemanticToken;
+use meerkat::reference::get_reference;
+use meerkat::rule::AST;
+use meerkat::semantic_token::{semantic_token_from_ast, LEGEND_TYPE};
 use ropey::Rope;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
-use tower_lsp::jsonrpc::{ErrorCode, Result};
-use tower_lsp::lsp_types::notification::Notification;
+use tower_lsp::jsonrpc::{Result};
 use tower_lsp::lsp_types::*;
 use tower_lsp::{Client, LanguageServer, LspService, Server};
+
 #[derive(Debug)]
 struct Backend {
     client: Client,
-    ast_map: DashMap<String, Vec<Rule>>,
+    ast_map: DashMap<String, AST>,
     document_map: DashMap<String, Rope>,
     semantic_token_map: DashMap<String, Vec<ImCompleteSemanticToken>>,
+    keywords: Vec<Keyword>,
 }
 
 #[tower_lsp::async_trait]
@@ -29,11 +34,11 @@ impl LanguageServer for Backend {
                 )),
                 completion_provider: Some(CompletionOptions {
                     resolve_provider: Some(false),
-                    trigger_characters: Some(vec!["(".to_string(), " ".to]),
+                    trigger_characters: Some(vec![" ".to_string(), ":".to_string(), ";".to_string(), "\n".to_string()]),
                     work_done_progress_options: Default::default(),
                     all_commit_characters: None,
                 }),
-                execute_command_provider: Some(ExecuteCommandOptions {
+                execute_command_provider: Some(ExecuteCommandOptions { // TODO
                     commands: vec!["dummy.do_something".to_string()],
                     work_done_progress_options: Default::default(),
                 }),
@@ -51,7 +56,7 @@ impl LanguageServer for Backend {
                             text_document_registration_options: {
                                 TextDocumentRegistrationOptions {
                                     document_selector: Some(vec![DocumentFilter {
-                                        language: Some("nrs".to_string()),
+                                        language: Some("suricata".to_string()),
                                         scheme: Some("file".to_string()),
                                         pattern: None,
                                     }]),
@@ -59,7 +64,7 @@ impl LanguageServer for Backend {
                             },
                             semantic_tokens_options: SemanticTokensOptions {
                                 work_done_progress_options: WorkDoneProgressOptions::default(),
-                                legend: SemanticTokensLegend {
+                                legend: SemanticTokensLegend { // TODO
                                     token_types: LEGEND_TYPE.clone().into(),
                                     token_modifiers: vec![],
                                 },
@@ -70,8 +75,6 @@ impl LanguageServer for Backend {
                         },
                     ),
                 ),
-                // definition: Some(GotoCapability::default()),
-                definition_provider: Some(OneOf::Left(true)),
                 references_provider: Some(OneOf::Left(true)),
                 rename_provider: Some(OneOf::Left(true)),
                 ..ServerCapabilities::default()
@@ -185,104 +188,249 @@ impl LanguageServer for Backend {
 
     async fn references(&self, params: ReferenceParams) -> Result<Option<Vec<Location>>> {
         let reference_list = || -> Option<Vec<Location>> {
-                   �      �  �  w                +       �   G   �:   �   ָ   G   G   �   �   ָ   G   �   I   �   ָ   G   �G   �o  G   �   ָ   G   �I   �   ָ   G   G   G   �   G   �   �   ָ   G   G   �   �   ��   �   ��   G   ��   �   ָ   G   �G   �o  �   ֵ	   �G
-   �6   �   �   �"   �   G   �   �#   �#   6
-   � 9   o � ָ   G   �G   �� o �G   �h   o �+   ֟ 
-`P� � (`P� P-`P� B� P(�  ,(����P''� %����P/
-P)1P   `   `   -                         �   6   �  9   �   9   �   9   I   ֟ `P*(*� P    �   �   i                       ��   ֵ    �   s ֵ    �   o � �   �   �    �   �  s �#   �   �   G   �G   ۶ �  s �   ֟&`P*P$`P*P� P� P)P x   x   A                  
-       �  6   �  G   �G   �o  G   9   � 9   9   I   ֶ  s  ֟ `P(/	P-(,`P(P  �   �   g                  	       �  G   �G   �o  �  �)   �   ֶ  G   �  �   �   ֶ  G   �   �   �   �  G   �   �	   �	   �� `P/P� -Q 8   8   
-                         �  � I   ֟ `P,P   �  �  �               @       ��   ֵ   �G   ۷   �  G   r ַ   �   ַ   �   �G   �   o �G   �o  I   ֵ    �   �   G   s ַ   �   �G   �	   o �G   �o  I
-   ַ   �   G
-   G   I   ַ   pI
-   ַ   �   I   I   ַ   I   ַ   �    �   �G   �o  �G   �o     o I   ַ   �    �   �G   �o  �G   �o     o I   ַ   I   ַ   �  G   G   I   ַ   �  G   G   I   ֵ    �   o �G   ۷   G   o �G   �o   s  ֲ    �    .�'���    �ַ   �G   �o  �G!   �"   o �G#   �h$   s ֟&`P� P$`P*`P� 
-P*
-P)`P� P$`P� 
-P*
-P)`P� `P-`P� `P+`P� P*
-P(����P)$`P� P*
-P(����P)2`P+`P� `P� `P*P� P*
-P$P$`P� `P+P/
-P/P4 @P  x   x   F                         �  �G   �   o �+   �   ֵ    �   �  o �G   �h   o �   ֟ `P� P?^/
-P)4P @   @                            �    �  h   s ֟ `P.P$P  @   @                             �   �G   �s  ֟ `P,P$
-P    T   T   %                          6   6   �   9   �   9   9   �� `P%%	*/	Q �   �   D                        ��   ַ   I   ַ   �G   �s  ֵ    �   G   �   s ַ   I   ֟&`P+`P+P$`P� P$`P+
-P �   �   g                        ��   ַ   G   �G   ۷   G   o �+   �   �   G   �G   ۷   G   s �   �	   �   �G   �s  �   ֟&`P� P� P� P)P |  |  &               !        ��   ַ   �   ַ   �   �  �   ַ   G   �(   �   ֵ    �   G   s ַ   I   �	   ֲ   �   ֵ    �   G      s ַ   G   �"   �   ֵ    �   G   	   o �   ַ   G
-   �"   �   ֵ    �   G   �   o �   ַ   G
-   �G   ۷   G   s ַ   �   �G   �h   �o I   �!   ֟&	`P*`P� � 
-_$� ,�P$� 	P)� 	P)� P$� P.TP  �   �   _                  
-        �   I   ָ   G   �#   �   ֵ    �   G      o �   ָ   G   �G   ۸   G   s ֟ `P,`P� P)`P� P$P @   @                          ��   ַ   �  I   ֟&`P-P          l        	       H       ��   ַ   �   ַ   �   �K  �   ַ   �G   �s  ַ   �G   ۵   6   �   9   s ֵ   �   �
-   ֵ   �G   �o  �   ֲ   �   �   ַ   G	   �(   �   ֵ
-    �   G	   s ַ   I	   �   ֵ    �   o �   �   ֵ    �   o �   ַ   G
-   �G   ۷   G   s ֵ    �   G      s ֵ    �   G      s ��   G   ��   �,   �   �   �G   ۷   G   �G   ۷   o �   G   o I   ַ   G   �3   �6   ַ   G   �G   ۷   G   h   o �:   �+   �:   �   G   �G   ۷   G   h   s �>   ֶ  �   �?   ֶ  �    �A   �   �B   �    �  o �   �D   �D   �  ַ   G    �G
-   ۷   G   �  o �H   ֟&
-`P*`P� +P$� *����P$ � 
-P)/� 
-_$� [� P)
-� P$�P$�P$� � "P,����P),� :""#����P� KP)*�0[-
-+� P)P  @   @                             �   �G   �o  �� `P,	P#Q    @   @                             �   �G   �o  �� `P,	P#Q    �  �  r               0        ��  ַ  G   �]  �   �  G   �(   �   ֵ    �  G   s ַ  I   �   ַ  �G   �s  ַ  G   �  G   G   �'   �   ַ  G   �G   ۷  G   o �   ֵ	   �G   ۷  G   s ַ  G   �G
-   ۷  G   s ֲ   �   .�(���   ���   �Q   �#   �	   �   ַ   G   �"   �&   ַ   G   �G   ۷   o �)   ֲ	   �	   ֑+   �
-   G   G   �G   ۷  r ֑0   �&`P� `P� 
-_$� `P+P$`P� %P)`P� P$`P� P$`P� `P� `P*`P� !P)`P� 
-`P� P)P          �                        ��  ַ  G   ��   �   �  I   ֵ   �Z   �   �   �G   �   o �   ַ      I   ֵ   G   �G	   ۷   s ֲ   �   �   ֑   �  G
-   �G	   ۷  G   s ֵ   �G	   ۷  G   s ֑   �&`P� `P+`P/
-`P� 	P(`P/`P� P$`P� `P� P$`P� P)P  <   <                           ��   ַ   G   ��&`P)Q   <   <                           ��   ַ   G   ��&`P)Q   <   <                           ��   ַ   G   ��&`P)Q   <   <                           ��   ַ   G   ��&`P)Q   <   <                           ��   ַ   G   ��&`P)Q   �   �   ^                        �   �S   �   �   [�   \]�)   �   �   �   �   �   �   HK�֓�����	   ^�   �   ֑   � `P/`P� ����$`P� ����,%`P� 	P �            1   \   \   2                         �  �   !�   �   �   �  HH�
-   �   �  �   �� `P� Q   �  ~        	       e      %��  ֶ �   �  �   � �   �   �� G   �   ��   �   �   ֒   �   ��   �   � �   H�  �   �  �D   �
-   �   �  �   �   �   �  �
-   �   �   �   �  �   �   �   �   ֓7   �   �   .�'�   �֓b����   �   ֓   �   �   ֑   �   �   ֑   �   �   �   �   |   �  } ��   �  � �   �   � �G   �o  �   �   �   I	   ַ  � �   �   ��   I
-   ַ  (I   ַ  I   ַ  I
-   ַ  I   ַ  �  I   I   ַ  �  I   I   ַ  �     I   I   ַ  �   G   I   ַ     I   ַ  I   ַ  I   ַ  c    I   ַ  �  I   I   ַ  I   ַ  I    �!   �  ��  �5   �  ��           �5   �"    �  �   G#   s ֓�  �9   �"    �  �   G$   s ֓�  �=   �"    �  �   G%   s ֓a  �A   �   G&   �  �c   '   d    � ֵ(   �  G	   �   �G   ֵ   G)   �I   H� ��   �K   � H� �� �`   �O   � �G*   �+   s ��   ֒Q   �   � �/   �S   � �G*   �'   s ַ   .�'�   �֓�����W   �  �G,   �g-   � �G.   �   o o �  ֑[   �"    �  �  s ֓L   �]   �/    �  s ֓3   �_   �/    �  s ֓   �a   �0    1   o ��c   �   �c   �"    �  �  s ֑e   �&`P� 
-`P� `P&fP� `P-`P� `P&`P*����`P� =`P� 
-`P+`P /`P.`P/P)`P� P� `P� 
-`P,`P+
-`P+
-`P,
-`P� `P� `P� `P� `P/`P+
-`P+`P/`P� `P+
-`P+`P%/`P� 
-`P� P4`P*
-`P� P$`P*
-`P� P$`P*
-`P.`P%.`P� `P,`P/`P/P$
-&fP� `P/P$����`P� `P� P#����P,`P-P$	`P*
-`P+P$	`P*
-`P,P$	`P*`P+P� `P-P)P   �  �  �  �  �    *         E   �          �  =   �   �   N                         �  G   �   �   �� �   �   �   �       o ��   �  � I   ֶ  �� 	`P� `P+P)`P,`P#Q  t   t   :                         4� �   �   �       � %o ��   �  � I   ֶ  �� 	`P� `P/P)`P,`P#Q  �   �   J                         �  G   �   �   �� �   �   �   �       o ��   �  � I   ֟ 	`P�0� `P+P)`P,P    �	  h	  �      	          �      c   d    �   ֶ  �    �  � �   o I   ַ   H�  ���  ��  ��  ��  ���  ֶ G   �  ��  ֒   �   H�  �   �	   ַ  �	   ��  �
-   � �G   ۷   Ho �   �S   �   �   ��   �   �   �  �   �   �F  �   �	   �z  �   ��  �   �  �   �   �  .�'�  ֓   �   �  .�'�  ֑   ��  �(   �   ��  �   �   ַ  .�'�  ֑   ֓~  �   �  �   �    �
-       � %o ��#   �  .�'�  ���  �(   �'   ��  �   �)   ַ  .�'�  ֑+   ֓  �+   �  �!   �-   ֶ  G   �G
-   ۷  o �0   ��  ֓�  �0   �  �   �2   �
-       � %o ��5   �  �  %�  %�  ֓�  �7   �  G   �   �9   �
-       � %o ��<   �  I   ֶ  I   ַ   H%�  �J   �B   �   � �G   ۷   H%o �$   �H   ַ   -�H.��'K�ֶ  I   �N   ֒N   �   H%�  �&   �R   �   � �G   ۷   H%o �W   �4   �X   �   -�H.��'K�ֶ  �G   .��'I   �֓�����a   �  �  %�   �d   ��  G   �f   �   �g   �
-       � %o ��j   �  ֓    �j   �   -�H.��(K���  ֑o   �   -�H.��'K�֓`����t   �  �w   �v   ��  �f   �x   ��  �U   �z   ַ  �  ��  �   �|   ַ  .�'�  ֑~   ַ  �  &�  ַ  &�  ��  ��   ��  �   ��   ��  ��   �T   ��   ��  �-   ��   ַ  �  �   ��   ַ  �  �  %��   �   ��   ��  ��   �   ��   �
-       � %o ���   �  �  %�  %�  ֶ  �  �   ��   �  �  &�   ��   ��   I   ��  �@   ��   ֶ  �  �  %�  &I   ��  G   �   ��   ֶ  I   ��   ֶ  �  �   ��   �  �   ��   �  ��   �  &I   ֶ  G   �T   ��   ֶ  �  �  G   %I   ��  G   �)   ��   ��  G   �   ��   ֶ  I   ��   ֶ  G   �G
-   ۵   �G   ��  o s ֶ  �  �   ��   ַ  �  ��   I   ַ   H�  &�  ֶ  �    �  � �   o I   ַ   H� G   �$   ��   �   � �G   ۷   Ho ��   ��   ��   �   -�H.��'K���  G   �   ��   ֶ  I    ��   ֶ  �    �  � �   o I!   ַ   -�H�  %Kֶ  �    �  � �   o I"   �9   ��   �  �G!   �  G   %I!   ֶ  �G"   �  G   %I"   ��   ֟ `P%+`P� P) `P+`P'`P&`P&`P&`P'`P-`P&fP� `P� P� `P� `P� `P*`P� `P/P)`P-`P� `P*`P� 
-P)`P&`P*`P� `P/P)`P� `P*`P� `P/P)`P*`P*`P� P/� /fP�0B  � �P�0 `P� � 
-`P� `P/P)`P&`P*`P� K  �  �`P�0 W`P� )� 
-.++`P� #`P/P)`P� `P� `P� � � `P� `P� � � `P� P#����P$`P� `P� 	`P� P)
-`P� P� � � � P)
-#� P� 9'�,P  �	           r          j   �  �   �   P                         �  � I   ֵ    �  �   G   s ֵ    �  s ֵ    �  s ֵ    �  s ֟ `P,`P� P$`P*P$`P+P$`P+P$P   �	  �	  �               �      ��  ֶ �   �   �c   d    �   � ��  G   �   �   �       o ��   �  �G   �g      o �  ֶ  �G   ۷  G   � Ho � H�   ֶ  �G   ۷  G	   � Ho � H�  ַ   �}   �   ַ  �n   �   ַ  G   G
-   �  G	   G
-   �   �   �  �7   �   �  G   G
-   �  G	   G
-   �   �#   ��   �#   ַ   �&   �$   � -�H�  G   G
-   %K�0   �*   �  �"   �+   ֶ -�H�  G	   G
-   %K�1   ֶ  �G   ۵   G   � Ho � H�2   �9   � -�H�   G   G
-   %Kֵ
-   �  ֓�  �A   �  �  ��  ��  ��  ���  ��  ֵ   G   �  ֵ   G   �	  ֵ   G   �
-  ��  G   �   �J   �       o ��L   �	  �G   �g      o �	  �   �  ֒N   � H�  G
-   ��  �R   �  �G   ۶ Ho �  ֵ    �  o �
-  ��
-  �   �Y   �	�
-  �Z   �#   �[   �  �
-  %�  ��  ֓4  �\   �  �  �G   �o �P   �`   �  �   �a   ַ  �a   �   �b   �  �b   �     %�  ��  ֓�  �c   �  �	  �G   �o �g   �g   �   �	  �G   �o �G   �k   ֶ H%�  G
-   �+   �p   ��    �  �G   ۶ H%o o �w   �;   �x   �  �   �y   ַ  �y   �   �z   �.  �z   �  �z   �  �
-  �G   �o �F   �~   �  �   �   ��  �   �     %�  ��  ֶ H�  ֓�  ��      �  �   ��   �   �  ��   �Q   ��   �  �   ��   ַ  � H&��   �   ��   �c  ��   �  �  %�  ֓2  ��   �  G   �%   ��   ַ  �   G   �G   �o ��   �W   ��   �  �   ��   ��   ��   d�  ַ  �   ��   � -�H.��'K�֓�   ��   ��   ��   �  G   �%   ��   ַ  �   G   �G   �o ��   �X   ��   �  �   ��   �a   ��   ��  ַ  �   ��   � -�H.��'K�֓2   ��   �   ��   �   ��   � -�H.��'K�֓4�����   �  G   �   ��   ַ  G   �  ��   ֵ    �  o �  *�  ֑�   �   �]   ��   �  �G   ۷  G   � Ho � H�   ��   �   ���   � -�H�  G   G
-   %K֓f   ��   �  �X   ��   �  �G   ۷  G    � Ho � H�   ��   �   ���   � -�H�  G    G
-   %K֑�   �  �   ��   �  �   ��   �  ��   ��&`P� /`P� `P+P)`P� P'$`P� P.`P� P.`P�(Q`P��(4`P� P� `P�#`P� `P(
-`P&`P&`P&`P'`P&`P/`P/`P/`P� `P+P)`P�0E  � �P8  `P*fP� `P� P(`P*P(`P� `P&� 
-`P� P.`P� `P*`P&`P� 
-`P� P� P� 'P#����P� `P� `P� `P� P.`P.`P*`P&`P&`P� `P� `P� 
-`P*`P� 
-`P� P� `P� `P*`P'	`P.`P/`P� `P� P� `P� `P:`P(	`P.`P/`P� `PJ %`P�0 %`P� `P*P� `P.`P� P� `P%y&����`P�-`P.`P� P� `P%-&����`P�(`P.	� Q  �	         �  �  �  �  ,               �       ��  ַ  G   �  G   �   �   �       o ��   �    �  o �   �	   �   G   ��   c    �   ��  G   �   �   �  �   �   �  G   �   �  ��  G	   �   �   �
-   �  ֓�   �   �   �G   ۷  o �  ֵ
-    �  �  �   �   �   �   �    �  o �   o G   �  ֵ
-    �  �  �    �    �  �    �  �  o o G   o %o �  ֑)   �    �  �  G   o �  ��  �"   �/   ��  �   �1   ��  *�3   �  �w   �4   �  G   �&   �6   �   �G   ۷  G   s �9   �9   �   �G   ۷  G   s ַ   �G   ۷  G   s �?   �9   �?   �   �G   ۷  G   s ַ   �G   ۷  G   s �E   ֵ    �  o ��  �H   �  �  �   �I   ��   �I   �I   )�  ֶ  �  G   )�  ַ  G   �  �N   �  �  ��  �A   �P   �    �  �  �  G   �   s ֵ    �  �   s ֓�  �U   �   �G   ۵   �G   ۷  o �   �G   �
-o *
-V瞯�<%o �  ֵ    �  �  o �  ַ  G   �  ��  G    �   �g   ַ  G    �  G   �j   �t   �k   �  �  G    +�  ��  �   �o   ַ  G    �  %�  �q   ֵ    �  �  o �  ַ  �  &�  ��  �z   �t   �  G   �/   �w   �  .�'�  �ֵ    �  �o �  �;   �{   �  �  G   &&�  ֵ    �  �  G   &o �  ��   ֵ    �  �  �  �   s ֵ    �  �  �   s ֑�   �(   ��   �    �  �  �  G   �   s ֑�   �#   ��   �   �G   ۵   G!   s ֑�   �  ��   ��   �  G"   �&   ��   �   �G   ۷  G"   s �
+            let uri = params.text_document_position.text_document.uri;
+            let ast = self.ast_map.get(&uri.to_string())?;
+            let rope = self.document_map.get(&uri.to_string())?;
+
+            let position = params.text_document_position.position;
+            let char = rope.try_line_to_char(position.line as usize).ok()?;
+            let offset = char + position.character as usize;
+            let reference_list = get_reference(&ast, offset, false);
+            let ret = reference_list
+                .into_iter()
+                .filter_map(|(_, range)| {
+                    let start_position = offset_to_position(range.start, &rope)?;
+                    let end_position = offset_to_position(range.end, &rope)?;
+
+                    let range = Range::new(start_position, end_position);
+
+                    Some(Location::new(uri.clone(), range))
+                })
+                .collect::<Vec<_>>();
+            Some(ret)
+        }();
+        Ok(reference_list)
+    }
+
+    async fn did_change_workspace_folders(&self, _: DidChangeWorkspaceFoldersParams) {
+        self.client
+            .log_message(MessageType::INFO, "workspace folders changed!")
+            .await;
+    }
+
+    async fn did_change_configuration(&self, _: DidChangeConfigurationParams) {
+        self.client
+            .log_message(MessageType::INFO, "configuration changed!")
+            .await;
+    }
+
+    async fn did_change_watched_files(&self, _: DidChangeWatchedFilesParams) {
+        self.client
+            .log_message(MessageType::INFO, "watched files have changed!")
+            .await;
+    }
+
+    async fn execute_command(&self, _: ExecuteCommandParams) -> Result<Option<Value>> {
+        self.client
+            .log_message(MessageType::INFO, "command executed!")
+            .await;
+
+        match self.client.apply_edit(WorkspaceEdit::default()).await {
+            Ok(res) if res.applied => self.client.log_message(MessageType::INFO, "applied").await,
+            Ok(_) => self.client.log_message(MessageType::INFO, "rejected").await,
+            Err(err) => self.client.log_message(MessageType::ERROR, err).await,
+        }
+
+        Ok(None)
+    }
+
+    async fn did_open(&self, params: DidOpenTextDocumentParams) {
+        self.client
+            .log_message(MessageType::INFO, "file opened!")
+            .await;
+        self.on_change(TextDocumentItem {
+            uri: params.text_document.uri,
+            text: params.text_document.text,
+            version: params.text_document.version,
+        })
+        .await
+    }
+
+    async fn did_change(&self, mut params: DidChangeTextDocumentParams) {
+        self.on_change(TextDocumentItem {
+            uri: params.text_document.uri,
+            text: std::mem::take(&mut params.content_changes[0].text),
+            version: params.text_document.version,
+        })
+        .await
+    }
+
+    async fn did_save(&self, _: DidSaveTextDocumentParams) {
+        self.client
+            .log_message(MessageType::INFO, "file saved!")
+            .await;
+    }
+
+    async fn did_close(&self, _: DidCloseTextDocumentParams) {
+        self.client
+            .log_message(MessageType::INFO, "file closed!")
+            .await;
+    }
+
+    async fn rename(&self, params: RenameParams) -> Result<Option<WorkspaceEdit>> {
+        let workspace_edit = || -> Option<WorkspaceEdit> {
+            let uri = params.text_document_position.text_document.uri;
+            let ast = self.ast_map.get(&uri.to_string())?;
+            let rope = self.document_map.get(&uri.to_string())?;
+
+            let position = params.text_document_position.position;
+            let char = rope.try_line_to_char(position.line as usize).ok()?;
+            let offset = char + position.character as usize;
+            let reference_list = get_reference(&ast, offset, true);
+            let new_name = params.new_name;
+            if reference_list.len() > 0 {
+                let edit_list = reference_list
+                    .into_iter()
+                    .filter_map(|(_, range)| {
+                        let start_position = offset_to_position(range.start, &rope)?;
+                        let end_position = offset_to_position(range.end, &rope)?;
+                        Some(TextEdit::new(
+                            Range::new(start_position, end_position),
+                            new_name.clone(),
+                        ))
+                    })
+                    .collect::<Vec<_>>();
+                let mut map = HashMap::new();
+                map.insert(uri, edit_list);
+                let workspace_edit = WorkspaceEdit::new(map);
+                Some(workspace_edit)
+            } else {
+                None
+            }
+        }();
+        Ok(workspace_edit)
+    }
+
+    async fn completion(&self, params: CompletionParams) -> Result<Option<CompletionResponse>> {
+        let uri = params.text_document_position.text_document.uri;
+        let position = params.text_document_position.position;
+        let completions = || -> Option<Vec<CompletionItem>> {
+            let rope = self.document_map.get(&uri.to_string())?;
+            let line = rope.get_line(position.line as usize)?;
+            let offset = position.character as usize;
+            let completions = completion(&line, offset);
+            Some(completions)
+        }();
+        Ok(completions.map(CompletionResponse::Array))
+    }
+}
+#[derive(Debug, Deserialize, Serialize)]
+
+enum CustomNotification {}
+struct TextDocumentItem {
+    uri: Url,
+    text: String,
+    version: i32,
+}
+impl Backend {
+    async fn on_change(&self, params: TextDocumentItem) {
+        let rope = ropey::Rope::from_str(&params.text);
+        self.document_map
+            .insert(params.uri.to_string(), rope.clone());
+        let (ast, errors) = AST::parser().parse_recovery(params.text);
+        let semantic_tokens = if let Some(tokens) = &ast {
+            semantic_token_from_ast(tokens)
+        }
+        else { vec![] };
+        self.client
+            .log_message(MessageType::INFO, format!("{:?}", errors))
+            .await;
+        let diagnostics = errors
+            .into_iter()
+            .filter_map(|item| {
+                let (message, span) = match item.reason() {
+                    chumsky::error::SimpleReason::Unclosed { span, delimiter } => {
+                        (format!("Unclosed delimiter {}", delimiter), span.clone())
+                    }
+                    chumsky::error::SimpleReason::Unexpected => (
+                        format!(
+                            "{}, expected {}",
+                            if item.found().is_some() {
+                                "Unexpected token in input"
+                            } else {
+                                "Unexpected end of input"
+                            },
+                            if item.expected().len() == 0 {
+                                "something else".to_string()
+                            } else {
+                                item.expected()
+                                    .map(|expected| match expected {
+                                        Some(expected) => expected.to_string(),
+                                        None => "end of input".to_string(),
+                                    })
+                                    .collect::<Vec<_>>()
+                                    .join(", ")
+                            }
+                        ),
+                        item.span(),
+                    ),
+                    chumsky::error::SimpleReason::Custom(msg) => (msg.to_string(), item.span()),
+                };
+
+                let diagnostic = || -> Option<Diagnostic> {
+                    // let start_line = rope.try_char_to_line(span.start)?;
+                    // let first_char = rope.try_line_to_char(start_line)?;
+                    // let start_column = span.start - first_char;
+                    let start_position = offset_to_position(span.start, &rope)?;
+                    let end_position = offset_to_position(span.end, &rope)?;
+                    // let end_line = rope.try_char_to_line(span.end)?;
+                    // let first_char = rope.try_line_to_char(end_line)?;
+                    // let end_column = span.end - first_char;
+                    Some(Diagnostic::new_simple(
+                        Range::new(start_position, end_position),
+                        message,
+                    ))
+                }();
+                diagnostic
+            })
+            .collect::<Vec<_>>();
+
+        self.client
+            .publish_diagnostics(params.uri.clone(), diagnostics, Some(params.version))
+            .await;
+
+        if let Some(ast) = ast {
+            self.ast_map.insert(params.uri.to_string(), ast);
+        }
+        self.client
+            .log_message(MessageType::INFO, &format!("{:?}", semantic_tokens))
+            .await;
+        self.semantic_token_map
+            .insert(params.uri.to_string(), semantic_tokens);
+    }
+}
+
+#[tokio::main]
+async fn main() {
+    env_logger::init();
+
+    let stdin = tokio::io::stdin();
+    let stdout = tokio::io::stdout();
+
+    let (service, socket) = LspService::build(|client| Backend {
+        client,
+        ast_map: DashMap::new(),
+        document_map: DashMap::new(),
+        semantic_token_map: DashMap::new(),
+        keywords: vec![]
+    })
+    .finish();
+    Server::new(stdin, stdout, socket).serve(service).await;
+}
+
+fn offset_to_position(offset: usize, rope: &Rope) -> Option<Position> {
+    let line = rope.try_char_to_line(offset).ok()?;
+    let first_char = rope.try_line_to_char(line).ok()?;
+    let column = offset - first_char;
+    Some(Position::new(line as u32, column as u32))
+}
