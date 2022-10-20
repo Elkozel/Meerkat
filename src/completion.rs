@@ -31,7 +31,8 @@ pub enum Keyword {
 pub fn get_completion(line: &RopeSlice, ast: &AST, offset: &usize, variables: &Vec<String>, keywords: &HashMap<String, Keyword>) -> Vec<CompletionItem> {
     let mut completion_tokens = vec![];
     // Get all variables (used in the document + specified externally)
-    let all_variables = search_for_variables(ast).extend(variables.iter());
+    let mut all_variables = search_for_variables(ast);
+    // all_variables.extend(variables);
     // for options we check if the offset is between the brackets
     get_completion_for_address(variables, &mut completion_tokens);
     completion_tokens
