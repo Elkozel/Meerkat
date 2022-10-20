@@ -14,7 +14,8 @@
 		"vscode": "^1.71.0"
 	},
 	"activationEvents": [
-		"onLanguage:suricata"
+		"onLanguage:suricata",
+		"onCommand:meerkat.hello"
 	],
 	"main": "./client/out/extension",
 	"contributes": {
@@ -61,12 +62,11 @@
 				"command": "meerkat.hello",
 				"shortTitle": "Meerkat: Hello world!"
 			}
-		]
-		,"languages": [{
+		],
+		"languages": [{
 			"id": "suricata",
 			"aliases": [
-				"Suricata",
-				"suricata"
+				"Suricata"
 			],
 			"extensions": [
 				"rules"

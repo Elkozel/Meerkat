@@ -2,7 +2,10 @@ use chumsky::prelude::*;
 use std::net::Ipv4Addr;
 use std::{net::IpAddr::V4, ops::Range};
 
-use crate::rule::{AST, Rule, Spanned, Span, Header, RuleOption, NetworkPort, NetworkAddress, NetworkDirection};
+use crate::rule::{
+    Header, NetworkAddress, NetworkDirection, NetworkPort, OptionsVariable, Rule, RuleOption, Span,
+    Spanned, AST,
+};
 
 #[derive(Debug)]
 pub struct ImCompleteSemanticToken {
@@ -243,10 +246,23 @@ impl RuleOption {
     fn parser() -> impl Parser<char, (RuleOption, Span), Error = Simple<char>> {
         let escaped_chars = one_of("\";").delimited_by(just("\\"), empty());
         let unescaped_value = escaped_chars
+            .clone()
             .or(none_of(";,"))
             .repeated()
             .collect::<String>()
-            .map_with_span(|options, span| (options, span));
+            .map_with_span(|options, span: Span| {
+                (OptionsVariable::Other((options, span.clone())), span)
+            });
+
+        let string_value = escaped_chars
+            .or(none_of("\""))
+            .repeated()
+            .delimited_by(just("\""), just("\""))
+            .collect::<String>()
+            .padded()
+            .map_with_span(|value, span: Span| {
+                (OptionsVariable::String((value, span.clone())), span)
+            });
 
         let keyword = text::ident()
             .padded()
@@ -255,7 +271,12 @@ impl RuleOption {
         let keyword_pair = keyword
             .padded()
             .then_ignore(just(":"))
-            .then(unescaped_value.padded().separated_by(just(",")))
+            .then(
+                string_value
+                    .or(unescaped_value)
+                    .padded()
+                    .separated_by(just(",")),
+            )
             .padded()
             .map_with_span(|(keyword, options), span| {
                 (RuleOption::KeywordPair(keyword, options), span)

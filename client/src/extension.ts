@@ -31,7 +31,8 @@ export function activate(context: ExtensionContext) {
 			env: {
 				...process.env, 
 				// eslint-disable-next-line @typescript-eslint/naming-convention
-				RUST_LOG: "debug",
+				RUST_BACKTRACE: "1",
+				RUST_LOG: "debug"
 			},
 		},
 	};
@@ -44,7 +45,7 @@ export function activate(context: ExtensionContext) {
 	// Options to control the language client
 	let clientOptions: LanguageClientOptions = {
 		// Register the server for plain text documents
-		documentSelector: [{ scheme: "file", language: "nrs" }],
+		documentSelector: [{ scheme: "file", language: "suricata" }],
 		synchronize: {
 			// Notify the server about file changes to '.clientrc files contained in the workspace
 			fileEvents: workspace.createFileSystemWatcher("**/.clientrc"),
@@ -53,7 +54,7 @@ export function activate(context: ExtensionContext) {
 	};
 
 	// Create the language client and start the client.
-	client = new LanguageClient("nrs-language-server", "nrs language server", serverOptions, clientOptions);
+	client = new LanguageClient("suricata-language-server", "Suricata language server", serverOptions, clientOptions);
 	client.start();
 }
 
