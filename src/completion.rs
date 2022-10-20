@@ -1,20 +1,24 @@
+use std::collections::HashMap;
+
 use ropey::RopeSlice;
 use tower_lsp::lsp_types::{CompletionItem, CompletionItemKind};
 
+use crate::rule::AST;
+
 #[derive(Debug, Clone)]
 pub struct KeywordRecord {
-    name: String,
-    description: String,
-    app_layer: String,
-    features: String,
-    documentation: String,
+    pub name: String,
+    pub description: String,
+    pub app_layer: String,
+    pub features: String,
+    pub documentation: String,
 }
 impl KeywordRecord {
-    pub fn to_keyword(record: &KeywordRecord) -> Keyword {
+    pub fn to_keyword(record: &KeywordRecord) -> (String, Keyword) {
         if record.features.starts_with("No option") {
-            return Keyword::NoOption((*record).clone());
+            return (record.name.clone(), Keyword::NoOption((*record).clone()));
         }
-        return Keyword::Other((*record).clone());
+        return (record.name.clone(), Keyword::Other((*record).clone()));
     }
 }
 
@@ -24,14 +28,17 @@ pub enum Keyword {
     Other(KeywordRecord),
 }
 
-pub fn completion(line: &RopeSlice, offset: usize) -> Vec<CompletionItem> {
+pub fn get_completion(line: &RopeSlice, ast: &AST, offset: &usize, variables: &Vec<String>, keywords: &HashMap<String, Keyword>) -> Vec<CompletionItem> {
     let mut completion_tokens = vec![];
-    get_completion_for_address(vec![], &mut completion_tokens);
+    // Get all variables (used in the document + specified externally)
+    let all_variables = search_for_variables(ast).extend(variables.iter());
+    // for options we check if the offset is between the brackets
+    get_completion_for_address(variables, &mut completion_tokens);
     completion_tokens
 }
 
 pub fn get_completion_for_address(
-    variables: Vec<String>,
+    variables: &Vec<String>,
     completion_tokens: &mut Vec<CompletionItem>,
 ) {
     // Push regular IPs
@@ -71,10 +78,10 @@ pub fn get_completion_for_address(
 }
 
 pub fn get_completion_for_option_keywords(
-    keywords: Vec<Keyword>,
+    keywords: &HashMap<String, Keyword>,
     completion_tokens: &mut Vec<CompletionItem>,
 ) {
-    keywords.iter().for_each(|keyword| match keyword {
+    keywords.iter().for_each(|(_, keyword)| match keyword {
         Keyword::NoOption(record) => completion_tokens.push(CompletionItem {
             label: record.name.clone(),
             insert_text: Some(format!("{}; ", record.name)),
@@ -115,4 +122,21 @@ fn get_port_by_protocol(protocol: String) -> Vec<u16> {
         "RDP" => vec![3389],
         _ => vec![],
     }
+}
+
+fn search_for_variables(ast: &AST) -> Vec<String> {
+    let mut ret = vec![];
+    ast.rules.iter().for_each(|(rule, _)| {
+        let (source, _) = &rule.header.0.source;
+        match source {
+            crate::rule::NetworkAddress::IPVariable((var_name, _)) => ret.push(var_name.clone()),
+            _ => ()
+        }
+        let (destination, _) = &rule.header.0.destination;
+        match destination {
+            crate::rule::NetworkAddress::IPVariable((var_name, _)) => ret.push(var_name.clone()),
+            _ => ()
+        }
+    });
+    ret
 }

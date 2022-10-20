@@ -24,7 +24,7 @@ export function activate(context: ExtensionContext) {
 	context.subscriptions.push( hello);
 
 	const traceOutputChannel = window.createOutputChannel("Meerkat Language Server trace");
-	const command = process.env.SERVER_PATH || "/home/togo/Desktop/Projects/meercat/target/release/meerkat";
+	const command = process.env.SERVER_PATH || "./Desktop/Projects/meercat/target/release/meerkat";
 	const run: Executable = {
 		command,
 		options: {

@@ -92,7 +92,7 @@ impl Eq for Header {}
 pub enum NetworkAddress {
     Any,
     IPAddr(Spanned<IpAddr>),
-    CIDR(Spanned<IpAddr>, Spanned<u16>),
+    CIDR(Spanned<IpAddr>, Spanned<u8>),
     IPGroup(Vec<Spanned<NetworkAddress>>),
     NegIP(Box<Spanned<NetworkAddress>>),
     IPVariable(Spanned<String>),

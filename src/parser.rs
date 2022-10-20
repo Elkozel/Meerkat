@@ -129,7 +129,7 @@ impl NetworkAddress {
                 .then_ignore(just("/"))
                 .then(
                     text::int(10)
-                        .map_with_span(|mask: String, span| (mask.parse::<u16>().unwrap(), span)),
+                        .map_with_span(|mask: String, span| (mask.parse::<u8>().unwrap(), span)),
                 )
                 .try_map(|(ip, mask), span| match ip.0 {
                     NetworkAddress::IPAddr(ip) => Ok((NetworkAddress::CIDR(ip, mask), span)),
