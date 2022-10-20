@@ -238,7 +238,7 @@ impl LanguageServer for Backend {
                 let line = rope.get_line(line_nr);
                 if let Some(line) = line {
                     let formatted_rule = rule.to_string();
-                    if (line.to_string() != formatted_rule) {
+                    if line.to_string() != formatted_rule {
                         let start_range = Position {
                             line: line_nr as u32,
                             character: 0,
@@ -268,7 +268,7 @@ impl LanguageServer for Backend {
         &self,
         params: DocumentRangeFormattingParams,
     ) -> Result<Option<Vec<TextEdit>>> {
-        let line_range = (params.range.start.line .. params.range.end.line);
+        let line_range = params.range.start.line .. params.range.end.line;
         let text_edits = || -> Option<Vec<TextEdit>> {
             let uri = params.text_document.uri;
             let ast = self.ast_map.get(&uri.to_string())?;
@@ -285,7 +285,7 @@ impl LanguageServer for Backend {
                     let line = rope.get_line(line_nr);
                     if let Some(line) = line {
                         let formatted_rule = rule.to_string();
-                        if (line.to_string() != formatted_rule) {
+                        if line.to_string() != formatted_rule {
                             let start_range = Position {
                                 line: line_nr as u32,
                                 character: 0,
