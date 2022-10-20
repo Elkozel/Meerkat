@@ -1,8 +1,8 @@
-use std::collections::{HashMap};
+use std::collections::HashMap;
 
 use chumsky::Parser;
 use dashmap::DashMap;
-use meerkat::completion::{Keyword, completion};
+use meerkat::completion::{completion, Keyword};
 use meerkat::parser::ImCompleteSemanticToken;
 use meerkat::reference::get_reference;
 use meerkat::rule::AST;
@@ -10,7 +10,7 @@ use meerkat::semantic_token::{semantic_token_from_ast, LEGEND_TYPE};
 use ropey::Rope;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
-use tower_lsp::jsonrpc::{Result};
+use tower_lsp::jsonrpc::Result;
 use tower_lsp::lsp_types::*;
 use tower_lsp::{Client, LanguageServer, LspService, Server};
 
@@ -34,11 +34,17 @@ impl LanguageServer for Backend {
                 )),
                 completion_provider: Some(CompletionOptions {
                     resolve_provider: Some(false),
-                    trigger_characters: Some(vec![" ".to_string(), ":".to_string(), ";".to_string(), "\n".to_string()]),
+                    trigger_characters: Some(vec![
+                        " ".to_string(),
+                        ":".to_string(),
+                        ";".to_string(),
+                        "\n".to_string(),
+                    ]),
                     work_done_progress_options: Default::default(),
                     all_commit_characters: None,
                 }),
-                execute_command_provider: Some(ExecuteCommandOptions { // TODO
+                execute_command_provider: Some(ExecuteCommandOptions {
+                    // TODO
                     commands: vec!["dummy.do_something".to_string()],
                     work_done_progress_options: Default::default(),
                 }),
@@ -64,7 +70,8 @@ impl LanguageServer for Backend {
                             },
                             semantic_tokens_options: SemanticTokensOptions {
                                 work_done_progress_options: WorkDoneProgressOptions::default(),
-                                legend: SemanticTokensLegend { // TODO
+                                legend: SemanticTokensLegend {
+                                    // TODO
                                     token_types: LEGEND_TYPE.clone().into(),
                                     token_modifiers: vec![],
                                 },
@@ -77,6 +84,8 @@ impl LanguageServer for Backend {
                 ),
                 references_provider: Some(OneOf::Left(true)),
                 rename_provider: Some(OneOf::Left(true)),
+                document_formatting_provider: Some(OneOf::Left(true)),
+                document_range_formatting_provider: Some(OneOf::Left(true)),
                 ..ServerCapabilities::default()
             },
         })
@@ -124,6 +133,12 @@ impl LanguageServer for Backend {
                 .collect::<Vec<_>>();
             Some(semantic_tokens)
         }();
+        self.client
+            .log_message(
+                MessageType::LOG,
+                format!("All tokens: {:?}", semantic_tokens),
+            )
+            .await;
         if let Some(semantic_token) = semantic_tokens {
             return Ok(Some(SemanticTokensResult::Tokens(SemanticTokens {
                 result_id: None,
@@ -210,6 +225,90 @@ impl LanguageServer for Backend {
             Some(ret)
         }();
         Ok(reference_list)
+    }
+
+    async fn formatting(&self, params: DocumentFormattingParams) -> Result<Option<Vec<TextEdit>>> {
+        let text_edits = || -> Option<Vec<TextEdit>> {
+            let uri = params.text_document.uri;
+            let ast = self.ast_map.get(&uri.to_string())?;
+            let rope = self.document_map.get(&uri.to_string())?;
+            let mut ret = vec![];
+            ast.rules.iter().for_each(|(rule, rule_span)| {
+                let line_nr = rope.char_to_line(rule_span.start);
+                let line = rope.get_line(line_nr);
+                if let Some(line) = line {
+                    let formatted_rule = rule.to_string();
+                    if (line.to_string() != formatted_rule) {
+                        let start_range = Position {
+                            line: line_nr as u32,
+                            character: 0,
+                        };
+                        let end_range = Position {
+                            line: line_nr as u32,
+                            character: 0,
+                        };
+                        ret.push(TextEdit {
+                            range: Range {
+                                start: start_range,
+                                end: end_range,
+                            },
+                            new_text: formatted_rule,
+                        })
+                    }
+                } else {
+                    return;
+                }
+            });
+            Some(ret)
+        }();
+        Ok(text_edits)
+    }
+
+    async fn range_formatting(
+        &self,
+        params: DocumentRangeFormattingParams,
+    ) -> Result<Option<Vec<TextEdit>>> {
+        let line_range = (params.range.start.line .. params.range.end.line);
+        let text_edits = || -> Option<Vec<TextEdit>> {
+            let uri = params.text_document.uri;
+            let ast = self.ast_map.get(&uri.to_string())?;
+            let rope = self.document_map.get(&uri.to_string())?;
+            let mut ret = vec![];
+            ast.rules
+                .iter()
+                .filter(|(_, rule_span)| {
+                    let rule_line = rope.char_to_line(rule_span.start) as u32;
+                    line_range.contains(&rule_line)
+                })
+                .for_each(|(rule, rule_span)| {
+                    let line_nr = rope.char_to_line(rule_span.start);
+                    let line = rope.get_line(line_nr);
+                    if let Some(line) = line {
+                        let formatted_rule = rule.to_string();
+                        if (line.to_string() != formatted_rule) {
+                            let start_range = Position {
+                                line: line_nr as u32,
+                                character: 0,
+                            };
+                            let end_range = Position {
+                                line: line_nr as u32,
+                                character: 0,
+                            };
+                            ret.push(TextEdit {
+                                range: Range {
+                                    start: start_range,
+                                    end: end_range,
+                                },
+                                new_text: formatted_rule,
+                            })
+                        }
+                    } else {
+                        return;
+                    }
+                });
+            Some(ret)
+        }();
+        Ok(text_edits)
     }
 
     async fn did_change_workspace_folders(&self, _: DidChangeWorkspaceFoldersParams) {
@@ -340,8 +439,9 @@ impl Backend {
         let (ast, errors) = AST::parser().parse_recovery(params.text);
         let semantic_tokens = if let Some(tokens) = &ast {
             semantic_token_from_ast(tokens)
-        }
-        else { vec![] };
+        } else {
+            vec![]
+        };
         self.client
             .log_message(MessageType::INFO, format!("{:?}", errors))
             .await;
@@ -407,6 +507,9 @@ impl Backend {
             .await;
         self.semantic_token_map
             .insert(params.uri.to_string(), semantic_tokens);
+        self.client
+            .log_message(MessageType::INFO, &format!("AST: {:?}", self.ast_map))
+            .await;
     }
 }
 
@@ -422,7 +525,7 @@ async fn main() {
         ast_map: DashMap::new(),
         document_map: DashMap::new(),
         semantic_token_map: DashMap::new(),
-        keywords: vec![]
+        keywords: vec![],
     })
     .finish();
     Server::new(stdin, stdout, socket).serve(service).await;
