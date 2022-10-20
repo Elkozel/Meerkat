@@ -2,10 +2,11 @@ use std::collections::HashMap;
 
 use chumsky::Parser;
 use dashmap::DashMap;
-use meerkat::completion::{completion, Keyword};
+use meerkat::completion::{get_completion, Keyword};
+use meerkat::hover::get_hover;
 use meerkat::parser::ImCompleteSemanticToken;
 use meerkat::reference::get_reference;
-use meerkat::rule::AST;
+use meerkat::rule::{Spanned, AST};
 use meerkat::semantic_token::{semantic_token_from_ast, LEGEND_TYPE};
 use ropey::Rope;
 use serde::{Deserialize, Serialize};
@@ -20,7 +21,8 @@ struct Backend {
     ast_map: DashMap<String, AST>,
     document_map: DashMap<String, Rope>,
     semantic_token_map: DashMap<String, Vec<ImCompleteSemanticToken>>,
-    keywords: Vec<Keyword>,
+    keywords: HashMap<String, Keyword>,
+    variables: Vec<String>,
 }
 
 #[tower_lsp::async_trait]
@@ -85,6 +87,7 @@ impl LanguageServer for Backend {
                 references_provider: Some(OneOf::Left(true)),
                 rename_provider: Some(OneOf::Left(true)),
                 document_formatting_provider: Some(OneOf::Left(true)),
+                hover_provider: Some(HoverProviderCapability::Simple(true)),
                 document_range_formatting_provider: Some(OneOf::Left(true)),
                 ..ServerCapabilities::default()
             },
@@ -268,7 +271,7 @@ impl LanguageServer for Backend {
         &self,
         params: DocumentRangeFormattingParams,
     ) -> Result<Option<Vec<TextEdit>>> {
-        let line_range = params.range.start.line .. params.range.end.line;
+        let line_range = params.range.start.line..params.range.end.line;
         let text_edits = || -> Option<Vec<TextEdit>> {
             let uri = params.text_document.uri;
             let ast = self.ast_map.get(&uri.to_string())?;
@@ -309,6 +312,31 @@ impl LanguageServer for Backend {
             Some(ret)
         }();
         Ok(text_edits)
+    }
+
+    async fn hover(&self, params: HoverParams) -> Result<Option<Hover>> {
+        let hover_content = || -> Option<Hover> {
+            let uri = params.text_document_position_params.text_document.uri;
+            let ast = self.ast_map.get(&uri.to_string())?;
+            let rope = self.document_map.get(&uri.to_string())?;
+
+            let position = params.text_document_position_params.position;
+            let char = rope.try_line_to_char(position.line as usize).ok()?;
+            let offset = char + position.character as usize;
+
+            let (hover, span) = get_hover(&ast, &offset, &self.keywords)?;
+            let start_position = offset_to_position(span.start, &rope)?;
+            let end_position = offset_to_position(span.end, &rope)?;
+            let hover_range = Range {
+                start: start_position,
+                end: end_position,
+            };
+            Some(Hover {
+                contents: hover,
+                range: Some(hover_range),
+            })
+        }();
+        Ok(hover_content)
     }
 
     async fn did_change_workspace_folders(&self, _: DidChangeWorkspaceFoldersParams) {
@@ -416,8 +444,9 @@ impl LanguageServer for Backend {
         let completions = || -> Option<Vec<CompletionItem>> {
             let rope = self.document_map.get(&uri.to_string())?;
             let line = rope.get_line(position.line as usize)?;
+            let ast = self.ast_map.get(&uri.to_string())?;
             let offset = position.character as usize;
-            let completions = completion(&line, offset);
+            let completions = get_completion(&line, &ast, &offset, &self.variables, &self.keywords);
             Some(completions)
         }();
         Ok(completions.map(CompletionResponse::Array))
@@ -525,7 +554,8 @@ async fn main() {
         ast_map: DashMap::new(),
         document_map: DashMap::new(),
         semantic_token_map: DashMap::new(),
-        keywords: vec![],
+        keywords: HashMap::new(),
+        variables: vec![],
     })
     .finish();
     Server::new(stdin, stdout, socket).serve(service).await;
