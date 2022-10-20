@@ -136,7 +136,9 @@ impl PartialEq for NetworkAddress {
             (NetworkAddress::NegIP(ip1), NetworkAddress::NegIP(ip2)) => {
                 ip1.as_ref().0 == ip2.as_ref().0
             }
-            (NetworkAddress::IPVariable(var1), NetworkAddress::IPVariable(var2)) => var1.0 == var2.0,
+            (NetworkAddress::IPVariable(var1), NetworkAddress::IPVariable(var2)) => {
+                var1.0 == var2.0
+            }
             _ => false,
         }
     }
@@ -193,11 +195,15 @@ impl PartialEq for NetworkPort {
                 let b: HashSet<_> = group2.iter().collect();
                 a == b
             }
-            (NetworkPort::PortRange(from1, to1), NetworkPort::PortRange(from2, to2)) => from1==from2 && to1 == to2,
+            (NetworkPort::PortRange(from1, to1), NetworkPort::PortRange(from2, to2)) => {
+                from1 == from2 && to1 == to2
+            }
             (NetworkPort::PortOpenRange((port1, _), up1), Self::PortOpenRange((port2, _), up2)) => {
                 port1 == port2 && up1 == up2
             }
-            (NetworkPort::NegPort(port1), NetworkPort::NegPort(port2)) => port1.as_ref().0 == port2.as_ref().0,
+            (NetworkPort::NegPort(port1), NetworkPort::NegPort(port2)) => {
+                port1.as_ref().0 == port2.as_ref().0
+            }
             _ => false,
         }
     }
@@ -225,7 +231,7 @@ impl fmt::Display for NetworkDirection {
 
 #[derive(Debug, Hash, Clone)]
 pub enum RuleOption {
-    KeywordPair(Spanned<String>, Vec<Spanned<String>>),
+    KeywordPair(Spanned<String>, Vec<Spanned<OptionsVariable>>),
     Buffer(Spanned<String>),
 }
 
@@ -247,14 +253,34 @@ impl fmt::Display for RuleOption {
 impl PartialEq for RuleOption {
     fn eq(&self, other: &Self) -> bool {
         match (self, other) {
-            (RuleOption::KeywordPair(keyword1, options1), RuleOption::KeywordPair(keyword2, options2)) => keyword1.0 == keyword2.0 && {
-                let a: HashSet<_> = options1.iter().map(|op| &op.0 ).collect();
-                let b: HashSet<_> = options2.iter().map(|op| &op.0 ).collect();
-                a == b
-            },
+            (
+                RuleOption::KeywordPair(keyword1, options1),
+                RuleOption::KeywordPair(keyword2, options2),
+            ) => {
+                keyword1.0 == keyword2.0 && {
+                    let a: HashSet<_> = options1.iter().map(|op| &op.0).collect();
+                    let b: HashSet<_> = options2.iter().map(|op| &op.0).collect();
+                    a == b
+                }
+            }
             (RuleOption::Buffer(buf1), RuleOption::Buffer(buf2)) => buf1.0 == buf2.0,
-            _ => false
+            _ => false,
         }
     }
 }
 impl Eq for RuleOption {}
+
+#[derive(Debug, Hash, Clone, PartialEq, Eq)]
+pub enum OptionsVariable {
+    String(Spanned<String>),
+    Other(Spanned<String>),
+}
+
+impl fmt::Display for OptionsVariable {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            OptionsVariable::String((string, span)) => write!(f, "\"{}\"", string),
+            OptionsVariable::Other((string, span)) => write!(f, "{}", string),
+        }
+    }
+}

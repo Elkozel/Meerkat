@@ -13,6 +13,7 @@ pub const LEGEND_TYPE: &[SemanticTokenType] = &[
     SemanticTokenType::KEYWORD,  // for keywords
     SemanticTokenType::OPERATOR, // for direction
     SemanticTokenType::PROPERTY, // for option values
+    SemanticTokenType::STRUCT,   // for IP variables
 ];
 
 pub fn semantic_token_from_ast(ast: &AST) -> Vec<ImCompleteSemanticToken> {
@@ -67,28 +68,28 @@ pub fn semantic_token_from_address(
                     .unwrap(),
             });
         }
-        NetworkAddress::IPAddr(ip) => {
+        NetworkAddress::IPAddr((_, ip_span)) => {
             semantic_tokens.push(ImCompleteSemanticToken {
-                start: ip.1.start,
-                length: ip.1.len(),
+                start: ip_span.start,
+                length: ip_span.len(),
                 token_type: LEGEND_TYPE
                     .iter()
                     .position(|item| item == &SemanticTokenType::KEYWORD)
                     .unwrap(),
             });
         }
-        NetworkAddress::CIDR(ip, mask) => {
+        NetworkAddress::CIDR((_, ip_span), (_, mask_span)) => {
             semantic_tokens.push(ImCompleteSemanticToken {
-                start: ip.1.start,
-                length: ip.1.len(),
+                start: ip_span.start,
+                length: ip_span.len(),
                 token_type: LEGEND_TYPE
                     .iter()
                     .position(|item| item == &SemanticTokenType::KEYWORD)
                     .unwrap(),
             });
             semantic_tokens.push(ImCompleteSemanticToken {
-                start: mask.1.start,
-                length: mask.1.len(),
+                start: mask_span.start,
+                length: mask_span.len(),
                 token_type: LEGEND_TYPE
                     .iter()
                     .position(|item| item == &SemanticTokenType::NUMBER)
@@ -108,23 +109,16 @@ pub fn semantic_token_from_address(
             });
         }
         NetworkAddress::NegIP(ip) => {
-            semantic_tokens.push(ImCompleteSemanticToken {
-                start: ip.as_ref().1.start,
-                length: ip.as_ref().1.len(),
-                token_type: LEGEND_TYPE
-                    .iter()
-                    .position(|item| item == &SemanticTokenType::STRING)
-                    .unwrap(),
-            });
+            semantic_token_from_address(ip.as_ref(), semantic_tokens);
             // semantic_token_from_address(ip.as_ref(), semantic_tokens);
         }
-        NetworkAddress::IPVariable(_) => {
+        NetworkAddress::IPVariable((_, variable_span)) => {
             semantic_tokens.push(ImCompleteSemanticToken {
-                start: span.start,
-                length: span.len(),
+                start: variable_span.start,
+                length: variable_span.len(),
                 token_type: LEGEND_TYPE
                     .iter()
-                    .position(|item| item == &SemanticTokenType::VARIABLE)
+                    .position(|item| item == &SemanticTokenType::STRUCT)
                     .unwrap(),
             });
         }
@@ -219,16 +213,28 @@ pub fn semantic_token_from_options(
                     .position(|item| item == &SemanticTokenType::KEYWORD)
                     .unwrap(),
             });
-            values.iter().for_each(|(_, valspan)| {
-                semantic_tokens.push(ImCompleteSemanticToken {
-                    start: valspan.start,
-                    length: valspan.len(),
-                    token_type: LEGEND_TYPE
-                        .iter()
-                        .position(|item| item == &SemanticTokenType::PROPERTY)
-                        .unwrap(),
-                });
-            })
+            values.iter().for_each(|(value, valspan)| match value {
+                crate::rule::OptionsVariable::String(_) => {
+                    semantic_tokens.push(ImCompleteSemanticToken {
+                        start: valspan.start,
+                        length: valspan.len(),
+                        token_type: LEGEND_TYPE
+                            .iter()
+                            .position(|item| item == &SemanticTokenType::STRING)
+                            .unwrap(),
+                    });
+                }
+                crate::rule::OptionsVariable::Other(_) => {
+                    semantic_tokens.push(ImCompleteSemanticToken {
+                        start: valspan.start,
+                        length: valspan.len(),
+                        token_type: LEGEND_TYPE
+                            .iter()
+                            .position(|item| item == &SemanticTokenType::PROPERTY)
+                            .unwrap(),
+                    });
+                }
+            });
         }
         RuleOption::Buffer((_, span)) => {
             semantic_tokens.push(ImCompleteSemanticToken {
