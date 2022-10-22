@@ -7,34 +7,8 @@ use crate::rule::{
     Spanned, AST,
 };
 
-#[derive(Debug)]
-pub struct ImCompleteSemanticToken {
-    pub start: usize,
-    pub length: usize,
-    pub token_type: usize,
-}
-
-impl AST {
-    pub fn parser() -> impl Parser<char, AST, Error = Simple<char>> {
-        let rule = Rule::parser().map(|rule| Some(rule));
-        let commented = just("#").ignore_then(text::newline()).map(|_| None);
-
-        rule.or(commented)
-            .separated_by(text::newline().or(text::whitespace()))
-            .allow_trailing()
-            .allow_leading()
-            .map(|rules| {
-                let mut all_rules = vec![];
-                collect_all(rules, &mut all_rules);
-                AST { rules: all_rules }
-            })
-    }
-}
-fn collect_all(rules: Vec<Option<(Rule, Range<usize>)>>, ret_arr: &mut Vec<Spanned<Rule>>) {
-    rules.iter().for_each(|rule| match rule {
-        Some(rule) => ret_arr.push(rule.clone()),
-        None => (),
-    })
+pub fn parse_ast() {
+    
 }
 
 impl Rule {

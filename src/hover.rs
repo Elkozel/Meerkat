@@ -1,33 +1,39 @@
-use std::{collections::HashMap, ops::RangeBounds};
+use std::collections::HashMap;
 
 use ipnet::IpNet;
 use tower_lsp::lsp_types::{HoverContents, MarkupContent};
 
 use crate::{
     completion::Keyword,
-    rule::{NetworkAddress, RuleOption, Spanned, AST, Header, Span},
+    rule::{Header, NetworkAddress, RuleOption, Span, Spanned, AST},
 };
 
-pub fn get_hover(ast: &AST, offset: &usize, keywords: &HashMap<String, Keyword>) -> Option<Spanned<HoverContents>>{
-    let (rule, _) = ast.rules.iter().find(|(_, span)| span.contains(offset))?;
+pub fn get_hover(
+    ast: &AST,
+    line: &u32,
+    col: &usize,
+    keywords: &HashMap<String, Keyword>,
+) -> Option<Spanned<HoverContents>> {
+    let (rule, _) = ast.rules.get(line)?;
     // check header
-    hover_for_header(&rule.header, offset)
-        .or(hover_for_options(&rule.options, offset, keywords))
+    hover_for_header(&rule.header, col).or(hover_for_options(&rule.options, col, keywords))
 }
 
-fn hover_for_header(header: &Spanned<Header>, offset: &usize) -> Option<Spanned<HoverContents>> {
+fn hover_for_header(header: &Spanned<Header>, col: &usize) -> Option<Spanned<HoverContents>> {
     let (header, _) = header;
-    
-    if header.source.1.contains(offset) {
-        hover_for_address(&header.source, offset);
-    }
-    else if header.destination.1.contains(offset) {
-        hover_for_address(&header.destination, offset);
+
+    if header.source.1.contains(col) {
+        hover_for_address(&header.source, col);
+    } else if header.destination.1.contains(col) {
+        hover_for_address(&header.destination, col);
     }
     None
 }
 
-fn hover_for_address(address: &Spanned<NetworkAddress>, offset: &usize) -> Option<Spanned<HoverContents>> {
+fn hover_for_address(
+    address: &Spanned<NetworkAddress>,
+    offset: &usize,
+) -> Option<Spanned<HoverContents>> {
     let (address, span) = address;
     match address {
         NetworkAddress::Any => None,
@@ -35,10 +41,13 @@ fn hover_for_address(address: &Spanned<NetworkAddress>, offset: &usize) -> Optio
         NetworkAddress::CIDR((ip, _), (mask, _)) => {
             let range = IpNet::new(ip.clone(), mask.clone());
             match range {
-                Ok(range) => Some((HoverContents::Markup(MarkupContent {
-                    kind: tower_lsp::lsp_types::MarkupKind::Markdown,
-                    value: format!("**{}** - **{}**", range.network(), range.broadcast()),
-                }), span.clone())),
+                Ok(range) => Some((
+                    HoverContents::Markup(MarkupContent {
+                        kind: tower_lsp::lsp_types::MarkupKind::Markdown,
+                        value: format!("**{}** - **{}**", range.network(), range.broadcast()),
+                    }),
+                    span.clone(),
+                )),
                 Err(_) => None,
             }
         }
@@ -71,7 +80,7 @@ fn hover_for_options(
 fn get_contents_for_keyword(
     keyword: &String,
     keywords: &HashMap<String, Keyword>,
-    span: &Span
+    span: &Span,
 ) -> Option<Spanned<HoverContents>> {
     let record = keywords.get(keyword)?;
     // Remove wrapper around keyword record
@@ -79,15 +88,18 @@ fn get_contents_for_keyword(
         Keyword::NoOption(keyword) => keyword,
         Keyword::Other(keyword) => keyword,
     };
-    Some((HoverContents::Markup(MarkupContent {
-        kind: tower_lsp::lsp_types::MarkupKind::Markdown,
-        value: [
-            format!("#{}", keyword.name),
-            "## Description".to_string(),
-            keyword.description.clone(),
-            "## Documentation".to_string(),
-            keyword.documentation.clone(),
-        ]
-        .join("\n"),
-    }), span.clone()))
+    Some((
+        HoverContents::Markup(MarkupContent {
+            kind: tower_lsp::lsp_types::MarkupKind::Markdown,
+            value: [
+                format!("#{}", keyword.name),
+                "## Description".to_string(),
+                keyword.description.clone(),
+                "## Documentation".to_string(),
+                keyword.documentation.clone(),
+            ]
+            .join("\n"),
+        }),
+        span.clone(),
+    ))
 }

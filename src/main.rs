@@ -4,10 +4,9 @@ use chumsky::Parser;
 use dashmap::DashMap;
 use meerkat::completion::{get_completion, Keyword};
 use meerkat::hover::get_hover;
-use meerkat::parser::ImCompleteSemanticToken;
 use meerkat::reference::get_reference;
-use meerkat::rule::{Spanned, AST};
-use meerkat::semantic_token::{semantic_token_from_ast, LEGEND_TYPE};
+use meerkat::rule::{Spanned, AST, Rule};
+use meerkat::semantic_token::{LEGEND_TYPE, ImCompleteSemanticToken, semantic_token_from_rule};
 use ropey::Rope;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
@@ -105,7 +104,11 @@ impl LanguageServer for Backend {
             let mut im_complete_tokens = self.semantic_token_map.get_mut(&uri)?;
             let rope = self.document_map.get(&uri)?;
             let ast = self.ast_map.get(&uri)?;
-            let extends_tokens = semantic_token_from_ast(&ast);
+            let mut extends_tokens = vec![];
+            ast.rules.iter().for_each(|(line, rule)| {
+                let line_offset = rope.line_to_char(line as usize);
+                semantic_token_from_rule(rule, &line_offset, &mut extends_tokens);
+            });
             im_complete_tokens.extend(extends_tokens);
             im_complete_tokens.sort_by(|a, b| a.start.cmp(&b.start));
             let mut pre_line = 0;
@@ -208,24 +211,11 @@ impl LanguageServer for Backend {
         let reference_list = || -> Option<Vec<Location>> {
             let uri = params.text_document_position.text_document.uri;
             let ast = self.ast_map.get(&uri.to_string())?;
-            let rope = self.document_map.get(&uri.to_string())?;
 
             let position = params.text_document_position.position;
-            let char = rope.try_line_to_char(position.line as usize).ok()?;
-            let offset = char + position.character as usize;
-            let reference_list = get_reference(&ast, offset, false);
-            let ret = reference_list
-                .into_iter()
-                .filter_map(|(_, range)| {
-                    let start_position = offset_to_position(range.start, &rope)?;
-                    let end_position = offset_to_position(range.end, &rope)?;
-
-                    let range = Range::new(start_position, end_position);
-
-                    Some(Location::new(uri.clone(), range))
-                })
-                .collect::<Vec<_>>();
-            Some(ret)
+            let col = position.character as usize;
+            let (reference_list, _) = get_reference(&ast, &position.line, &col, false)?;
+            Some(reference_list)
         }();
         Ok(reference_list)
     }
@@ -279,7 +269,7 @@ impl LanguageServer for Backend {
             let mut ret = vec![];
             ast.rules
                 .iter()
-                .filter(|(_, rule_span)| {
+                .filter(|(_, (rule, rule_span))| {
                     let rule_line = rope.char_to_line(rule_span.start) as u32;
                     line_range.contains(&rule_line)
                 })
@@ -321,10 +311,9 @@ impl LanguageServer for Backend {
             let rope = self.document_map.get(&uri.to_string())?;
 
             let position = params.text_document_position_params.position;
-            let char = rope.try_line_to_char(position.line as usize).ok()?;
-            let offset = char + position.character as usize;
+            let offset = position.character as usize;
 
-            let (hover, span) = get_hover(&ast, &offset, &self.keywords)?;
+            let (hover, span) = get_hover(&ast, &position.line, &offset, &self.keywords)?;
             let start_position = offset_to_position(span.start, &rope)?;
             let end_position = offset_to_position(span.end, &rope)?;
             let hover_range = Range {
@@ -411,19 +400,17 @@ impl LanguageServer for Backend {
             let rope = self.document_map.get(&uri.to_string())?;
 
             let position = params.text_document_position.position;
-            let char = rope.try_line_to_char(position.line as usize).ok()?;
-            let offset = char + position.character as usize;
-            let reference_list = get_reference(&ast, offset, true);
-            let new_name = params.new_name;
+            let col = position.character as usize;
+            let (reference_list, variable_name) = get_reference(&ast, &position.line, &col, true)?;
             if reference_list.len() > 0 {
                 let edit_list = reference_list
                     .into_iter()
-                    .filter_map(|(_, range)| {
-                        let start_position = offset_to_position(range.start, &rope)?;
-                        let end_position = offset_to_position(range.end, &rope)?;
+                    .filter_map(|position| {
+                        let start_position = position;
+                        let end_position = Position::new(position.line, position.character + variable_name.len());
                         Some(TextEdit::new(
                             Range::new(start_position, end_position),
-                            new_name.clone(),
+                            params.new_name.clone(),
                         ))
                     })
                     .collect::<Vec<_>>();
@@ -465,12 +452,24 @@ impl Backend {
         let rope = ropey::Rope::from_str(&params.text);
         self.document_map
             .insert(params.uri.to_string(), rope.clone());
-        let (ast, errors) = AST::parser().parse_recovery(params.text);
-        let semantic_tokens = if let Some(tokens) = &ast {
-            semantic_token_from_ast(tokens)
-        } else {
-            vec![]
-        };
+        
+        let mut semantic_tokens = vec![];
+        let mut errors = vec![];
+        let mut ast = AST{ rules: HashMap::with_capacity(rope.len_lines())};
+        rope.lines().for_each(|line| {
+            let (rule, errors) = Rule::parser().parse_recovery(line);
+            ast.rules.insert(line, rule);
+            errors.push(errors);
+
+            let line_offset = rope.line_to_char(line);
+            semantic_token_from_rule(rule, &line_offset, &mut semantic_tokens)
+        });
+        // let (ast, errors) = AST::parser().parse_recovery(params.text);
+        // let semantic_tokens = if let Some(tokens) = &ast {
+        //     semantic_token_from_ast(tokens)
+        // } else {
+        //     vec![]
+        // };
         self.client
             .log_message(MessageType::INFO, format!("{:?}", errors))
             .await;
@@ -527,10 +526,8 @@ impl Backend {
         self.client
             .publish_diagnostics(params.uri.clone(), diagnostics, Some(params.version))
             .await;
-
-        if let Some(ast) = ast {
+            
             self.ast_map.insert(params.uri.to_string(), ast);
-        }
         self.client
             .log_message(MessageType::INFO, &format!("{:?}", semantic_tokens))
             .await;

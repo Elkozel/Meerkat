@@ -127,7 +127,7 @@ fn get_port_by_protocol(protocol: String) -> Vec<u16> {
 
 fn search_for_variables(ast: &AST) -> Vec<String> {
     let mut ret = vec![];
-    ast.rules.iter().for_each(|(rule, _)| {
+    ast.rules.iter().for_each(|(_, (rule, _))| {
         let (source, _) = &rule.header.0.source;
         match source {
             crate::rule::NetworkAddress::IPVariable((var_name, _)) => ret.push(var_name.clone()),
