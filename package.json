@@ -80,7 +80,9 @@
 		"watch": "tsc -b -w",
 		"lint": "eslint ./client/src --ext .ts,.tsx",
 		"postinstall": "cd client && npm install && cd .. && cargo build",
-		"test": "sh ./scripts/e2e.sh"
+		"test": "sh ./scripts/e2e.sh",
+		"install-rust": "curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh",
+		"cargo-install": "cargo build"
 	},
 	"devDependencies": {
 		"@types/vscode": "^1.71.0",
