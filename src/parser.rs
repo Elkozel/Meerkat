@@ -3,13 +3,8 @@ use std::net::Ipv4Addr;
 use std::{net::IpAddr::V4, ops::Range};
 
 use crate::rule::{
-    Header, NetworkAddress, NetworkDirection, NetworkPort, OptionsVariable, Rule, RuleOption, Span,
-    Spanned, AST,
+    Header, NetworkAddress, NetworkDirection, NetworkPort, OptionsVariable, Rule, RuleOption, Span
 };
-
-pub fn parse_ast() {
-    
-}
 
 impl Rule {
     pub fn parser() -> impl Parser<char, (Rule, Span), Error = Simple<char>> {
@@ -192,7 +187,16 @@ impl NetworkPort {
                 .then(port_number.or(port_range).or(port_group.clone()))
                 .map_with_span(|(_, ports), span| (NetworkPort::NegPort(Box::new(ports)), span));
 
-            negated_port
+            // Variable
+            let port_variable =
+                just("$")
+                    .then(text::ident())
+                    .map_with_span(|(_, name), span: Range<usize>| {
+                        (NetworkPort::PortVar((name, span.clone())), span)
+                    });
+
+            port_variable
+                .or(negated_port)
                 .or(port_group)
                 .or(port_range)
                 .or(port_number)

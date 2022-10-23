@@ -27,7 +27,7 @@ pub fn semantic_token_from_rule(
     offset: &usize,
     mut semantic_tokens: &mut Vec<ImCompleteSemanticToken>,
 ) {
-    let (rule, rule_span) = rule;
+    let (rule, _) = rule;
     // Push the action token
     let action = &rule.action;
     semantic_tokens.push(ImCompleteSemanticToken {
@@ -70,7 +70,7 @@ pub fn semantic_token_from_address(
                 length: span.len(),
                 token_type: LEGEND_TYPE
                     .iter()
-                    .position(|item| item == &SemanticTokenType::VARIABLE)
+                    .position(|item| item == &SemanticTokenType::STRUCT)
                     .unwrap(),
             });
         }
@@ -124,7 +124,7 @@ pub fn semantic_token_from_address(
                 length: variable_span.len(),
                 token_type: LEGEND_TYPE
                     .iter()
-                    .position(|item| item == &SemanticTokenType::STRUCT)
+                    .position(|item| item == &SemanticTokenType::VARIABLE)
                     .unwrap(),
             });
         }
@@ -145,7 +145,7 @@ pub fn semantic_token_from_port(
                 length: span.len(),
                 token_type: LEGEND_TYPE
                     .iter()
-                    .position(|item| item == &SemanticTokenType::VARIABLE)
+                    .position(|item| item == &SemanticTokenType::STRUCT)
                     .unwrap(),
             });
         }
@@ -201,6 +201,16 @@ pub fn semantic_token_from_port(
                     .position(|item| item == &SemanticTokenType::NUMBER)
                     .unwrap(),
             });
+        }
+        NetworkPort::PortVar((_, variable_span)) => {
+            semantic_tokens.push(ImCompleteSemanticToken {
+                start: variable_span.start + offset,
+                length: variable_span.len(),
+                token_type: LEGEND_TYPE
+                    .iter()
+                    .position(|item| item == &SemanticTokenType::VARIABLE)
+                    .unwrap(),
+            });            
         }
     }
 }

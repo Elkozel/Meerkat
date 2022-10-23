@@ -46,19 +46,19 @@ impl PartialEq for Rule {
 impl Eq for Rule {}
 impl Rule {
     pub fn source(&self) -> &Spanned<NetworkAddress> {
-        let (header, span) = &self.header;
+        let (header, _) = &self.header;
         &header.source
     }
     pub fn source_port(&self) -> &Spanned<NetworkPort> {
-        let (header, span) = &self.header;
+        let (header, _) = &self.header;
         &header.source_port
     }
     pub fn destination(&self) -> &Spanned<NetworkAddress> {
-        let (header, span) = &self.header;
+        let (header, _) = &self.header;
         &header.destination
     }
     pub fn destination_port(&self) -> &Spanned<NetworkPort> {
-        let (header, span) = &self.header;
+        let (header, _) = &self.header;
         &header.destination_port
     }
     pub fn addresses(&self) -> Vec<&Spanned<NetworkAddress>> {
@@ -104,11 +104,17 @@ impl PartialEq for Header {
 }
 impl Eq for Header {}
 impl Header {
-    pub fn find_variables(&self, name: &Option<String>, variables: &mut Vec<Spanned<String>>) {
-        let (source, source_span) = &self.source;
-        source.find_variables_with_array(name, &mut variables);
-        let (destination, destination_span) = &self.destination;
-        destination.find_variables_with_array(name, &mut variables);
+    pub fn find_address_variables(&self, name: &Option<String>, variables: &mut Vec<Spanned<String>>) {
+        let (source, _) = &self.source;
+        source.find_variables_with_array(name, variables);
+        let (destination, _) = &self.destination;
+        destination.find_variables_with_array(name,  variables);
+    }
+    pub fn find_port_variables(&self, name: &Option<String>, variables: &mut Vec<Spanned<String>>) {
+        let (source_port, _) = &self.source_port;
+        source_port.find_variables_with_array(name, variables);
+        let (destination_port, _) = &self.destination_port;
+        destination_port.find_variables_with_array(name,  variables);
     }
 }
 
@@ -171,26 +177,7 @@ impl Eq for NetworkAddress {}
 impl NetworkAddress {
     pub fn find_variables(&self, name: &Option<String>) -> Option<Vec<Spanned<String>>> {
         let mut ret: Vec<Spanned<String>> = vec![];
-        match &self {
-            NetworkAddress::Any => (),
-            NetworkAddress::IPAddr(_) => (),
-            NetworkAddress::CIDR(_, _) => (),
-            NetworkAddress::IPGroup(group) => group.iter().for_each(|(ip, ip_span)| {
-                ip.find_variables_with_array(name, &mut ret);
-            }),
-            NetworkAddress::NegIP(ip) => ip.deref().0.find_variables_with_array(name, &mut ret),
-            NetworkAddress::IPVariable(var) => {
-                match name {
-                    Some(name) => {if *name == var.0 {
-                        ret.push(var.clone());
-                    }},
-                    None => {ret.push(var.clone());},
-                };
-                
-            }
-            _ => ()
-        }
-
+        self.find_variables_with_array(name, &mut ret);
         if ret.len() == 0 {
             return None;
         } else {
@@ -202,7 +189,7 @@ impl NetworkAddress {
             NetworkAddress::Any => (),
             NetworkAddress::IPAddr(_) => (),
             NetworkAddress::CIDR(_, _) => (),
-            NetworkAddress::IPGroup(group) => group.iter().for_each(|(ip, ip_span)| {
+            NetworkAddress::IPGroup(group) => group.iter().for_each(|(ip, _)| {
                 ip.find_variables_with_array(name, vector);
             }),
             NetworkAddress::NegIP(ip) => ip.deref().0.find_variables_with_array(name, vector),
@@ -227,6 +214,7 @@ pub enum NetworkPort {
     PortRange(Spanned<u16>, Spanned<u16>),
     PortOpenRange(Spanned<u16>, bool),
     NegPort(Box<Spanned<NetworkPort>>),
+    PortVar(Spanned<String>)
 }
 
 impl fmt::Display for NetworkPort {
@@ -255,6 +243,37 @@ impl fmt::Display for NetworkPort {
                 let (port, _) = port.as_ref();
                 write!(f, "!{}", port)
             }
+            NetworkPort::PortVar((port_name, span)) => {
+                write!(f, "${}", port_name)
+            },
+        }
+    }
+}
+impl NetworkPort {
+    pub fn find_variables(&self, name: &Option<String>) -> Option<Vec<Spanned<String>>> {
+        let mut ret: Vec<Spanned<String>> = vec![];
+        self.find_variables_with_array(name, &mut ret);
+        if ret.len() == 0 {
+            return None;
+        } else {
+            Some(ret)
+        }
+    }
+    fn find_variables_with_array(&self, name: &Option<String>, vector: &mut Vec<Spanned<String>>) -> () {
+        match &self {
+            NetworkPort::PortGroup(group) => group.iter().for_each(|(port, _)| {
+                    port.find_variables_with_array(name, vector);
+                }),
+            NetworkPort::NegPort(port) => port.deref().0.find_variables_with_array(name, vector),
+            NetworkPort::PortVar(var) => {
+                    match name {
+                        Some(name) => {if *name == var.0 {
+                            vector.push(var.clone());
+                        }},
+                        None => {vector.push(var.clone());},
+                    };
+            },
+            _ => (),
         }
     }
 }
@@ -277,6 +296,9 @@ impl PartialEq for NetworkPort {
             }
             (NetworkPort::NegPort(port1), NetworkPort::NegPort(port2)) => {
                 port1.as_ref().0 == port2.as_ref().0
+            }
+            (NetworkPort::PortVar(var1), NetworkPort::PortVar(var2)) => {
+                var1.0 == var2.0
             }
             _ => false,
         }
@@ -353,8 +375,8 @@ pub enum OptionsVariable {
 impl fmt::Display for OptionsVariable {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            OptionsVariable::String((string, span)) => write!(f, "\"{}\"", string),
-            OptionsVariable::Other((string, span)) => write!(f, "{}", string),
+            OptionsVariable::String((string, _)) => write!(f, "\"{}\"", string),
+            OptionsVariable::Other((string, _)) => write!(f, "{}", string),
         }
     }
 }

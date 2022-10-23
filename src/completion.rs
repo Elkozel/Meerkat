@@ -28,13 +28,19 @@ pub enum Keyword {
     Other(KeywordRecord),
 }
 
-pub fn get_completion(line: &RopeSlice, ast: &AST, offset: &usize, variables: &Vec<String>, keywords: &HashMap<String, Keyword>) -> Vec<CompletionItem> {
+pub fn get_completion(
+    line: &RopeSlice,
+    ast: &AST,
+    offset: &usize,
+    variables: &(Vec<String>, Vec<String>),
+    keywords: &HashMap<String, Keyword>,
+) -> Vec<CompletionItem> {
     let mut completion_tokens = vec![];
     // Get all variables (used in the document + specified externally)
     let mut all_variables = search_for_variables(ast);
     // all_variables.extend(variables);
     // for options we check if the offset is between the brackets
-    get_completion_for_address(variables, &mut completion_tokens);
+    get_completion_for_address(&variables.0, &mut completion_tokens);
     completion_tokens
 }
 
@@ -76,6 +82,13 @@ pub fn get_completion_for_address(
             ..Default::default()
         })
     });
+}
+
+pub fn get_completion_for_port(
+    variables: &Vec<String>,
+    completion_tokens: &mut Vec<CompletionItem>,
+) {
+    todo!();
 }
 
 pub fn get_completion_for_option_keywords(
@@ -131,12 +144,12 @@ fn search_for_variables(ast: &AST) -> Vec<String> {
         let (source, _) = &rule.header.0.source;
         match source {
             crate::rule::NetworkAddress::IPVariable((var_name, _)) => ret.push(var_name.clone()),
-            _ => ()
+            _ => (),
         }
         let (destination, _) = &rule.header.0.destination;
         match destination {
             crate::rule::NetworkAddress::IPVariable((var_name, _)) => ret.push(var_name.clone()),
-            _ => ()
+            _ => (),
         }
     });
     ret
