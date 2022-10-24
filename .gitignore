@@ -1,4 +1,8 @@
-.vscode/**
-.vscode-test/**
-out/**
-node_modules/**
+out
+node_modules
+client/server
+.vscode-test
+
+# Added by cargo
+
+/target

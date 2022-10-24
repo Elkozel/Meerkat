@@ -1,92 +1,97 @@
 {
-  "name": "meerkat",
-  "displayName": "meerkat",
-  "description": "Suricata/Snort formatter extension",
-  "version": "0.0.1",
-  "engines": {
-    "vscode": "^1.71.0"
-  },
-  "categories": [
-    "Other"
-  ],
-  "activationEvents": [
-    "onCommand:meerkat.hello",
-    "onLanguage:suricata"
-  ],
-  "main": "./dist/extension.js",
-  "contributes": {
-    "configuration": {
-      "title": "Suricata",
-      "properties": {
-        "suricata.formatActiveLineOnly": {
-          "type": "boolean",
-          "default": true,
-          "description": "The formatter will only format the rule on the actively selected line."
-        },
-        "suricata.formatSpaceAfterOption": {
-          "type": "boolean",
-          "default": true,
-          "description": "Put a space after every option.",
-          "examples": ["True: ... (msg:\"(...)\"; flow:stateless; (...))", "False: ... (msg:\"(...)\";flow:stateless;(...))"]
-        },
-        "suricata.formatSpaceAfterLastOption": {
-          "type": "boolean",
-          "default": false,
-          "description": "Put a space after the last option.",
-          "examples": ["True: ... ((...); flow:stateless; )", "False: ... ((...); flow:stateless;)"]
-        },
-        "suricata.formatSpaceAfterSemicolomnInOption": {
-          "type": "boolean",
-          "default": false,
-          "description": "Put a space after the semicolumn inside options.",
-          "examples": ["True: ... (msg: \"(...)\"; flow:stateless; (...))", "False: ... (msg: \"(...)\"; flow: stateless; (...))"]
-        }
-      }
-    },
-    "languages": [
-      {
-        "id": "suricata",
-        "aliases": [
-          "Suricata"
-        ],
-        "extensions": [
-          ".rules",
-          ".suricata"
-        ]
-      }
-    ],
-    "commands": [
-      {
-        "command": "meerkat.hello",
-        "title": "Say hello to Meerkat!"
-      }
-    ]
-  },
-  "scripts": {
-    "vscode:prepublish": "npm run package",
-    "compile": "webpack",
-    "watch": "webpack --watch",
-    "package": "webpack --mode production --devtool hidden-source-map",
-    "compile-tests": "tsc -p . --outDir out",
-    "watch-tests": "tsc -p . -w --outDir out",
-    "pretest": "npm run compile-tests && npm run compile && npm run lint",
-    "lint": "eslint src --ext ts",
-    "test": "node ./out/test/runTest.js"
-  },
-  "devDependencies": {
-    "@types/vscode": "^1.71.0",
-    "@types/glob": "^7.2.0",
-    "@types/mocha": "^9.1.1",
-    "@types/node": "16.x",
-    "@typescript-eslint/eslint-plugin": "^5.31.0",
-    "@typescript-eslint/parser": "^5.31.0",
-    "eslint": "^8.20.0",
-    "glob": "^8.0.3",
-    "mocha": "^10.0.0",
-    "typescript": "^4.7.4",
-    "ts-loader": "^9.3.1",
-    "webpack": "^5.74.0",
-    "webpack-cli": "^4.10.0",
-    "@vscode/test-electron": "^2.1.5"
-  }
+	"name": "meerkat",
+	"displayName": "Meerkat",
+	"description": "Suricata/Snort VSCode extenssion",
+	"author": "Tsvetomir Hristov",
+	"license": "MIT",
+	"version": "0.1.0",
+	"keywords": [
+		"lsp",
+		"vscode extenssion",
+		"language support"
+	],
+	"engines": {
+		"vscode": "^1.71.0"
+	},
+	"activationEvents": [
+		"onLanguage:suricata",
+		"onCommand:meerkat.hello"
+	],
+	"main": "./client/out/extension",
+	"contributes": {
+		"configuration": {
+			"title": "Meerkat",
+			"properties": {
+				"meerkat.formatActiveLineOnly": {
+					"type": "boolean",
+					"default": true,
+					"description": "The formatter will only format the rule on the actively selected line."
+				},
+				"meerkat.formatSpaceAfterOption": {
+					"type": "boolean",
+					"default": true,
+					"description": "Put a space after every option.",
+					"examples": [
+						"True: ... (msg:\"(...)\"; flow:stateless; (...))",
+						"False: ... (msg:\"(...)\";flow:stateless;(...))"
+					]
+				},
+				"meerkat.formatSpaceAfterLastOption": {
+					"type": "boolean",
+					"default": false,
+					"description": "Put a space after the last option.",
+					"examples": [
+						"True: ... ((...); flow:stateless; )",
+						"False: ... ((...); flow:stateless;)"
+					]
+				},
+				"meerkat.formatSpaceAfterSemicolomnInOption": {
+					"type": "boolean",
+					"default": false,
+					"description": "Put a space after the semicolumn inside options.",
+					"examples": [
+						"True: ... (msg: \"(...)\"; flow:stateless; (...))",
+						"False: ... (msg: \"(...)\"; flow: stateless; (...))"
+					]
+				}
+			}
+		},
+		"commands": [
+			{
+				"title": "Say hi to Meerkat",
+				"command": "meerkat.hello",
+				"shortTitle": "Meerkat: Hello world!"
+			}
+		],
+		"languages": [{
+			"id": "suricata",
+			"aliases": [
+				"Suricata"
+			],
+			"extensions": [
+				"rules"
+			],
+			"configuration": "./language-configuration.json"
+		}]
+	},
+	"scripts": {
+		"vscode:prepublish": "npm run compile",
+		"compile": "tsc -b && cargo build --release",
+		"watch": "tsc -b -w",
+		"lint": "eslint ./client/src --ext .ts,.tsx",
+		"postinstall": "cd client && npm install && cd .. && cargo build",
+		"test": "sh ./scripts/e2e.sh",
+		"install-rust": "curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh",
+		"cargo-install": "cargo build"
+	},
+	"devDependencies": {
+		"@types/vscode": "^1.71.0",
+		"@types/mocha": "^9.1.0",
+		"@types/node": "^16.11.7",
+		"@typescript-eslint/eslint-plugin": "^5.30.0",
+		"@typescript-eslint/parser": "^5.30.0",
+		"eslint": "^8.13.0",
+		"mocha": "^9.2.1",
+		"typescript": "^4.8.4"
+	}
 }
