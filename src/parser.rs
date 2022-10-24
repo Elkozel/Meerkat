@@ -95,20 +95,20 @@ impl NetworkAddress {
                         span,
                     )
                 });
-            // let ipv6 = text::int(16)
-            //     .or(just(":").or(just("::")))
-            //     .repeated()
-            //     .collect::<String>()
-            //     .try_map(|ipv6, span: Span| {
-            //         let ip = ipv6.parse::<Ipv6Addr>();
-            //         match ip {
-            //             Ok(ip) => Ok((NetworkAddress::IPAddr((V6(ip), span.clone())), span)),
-            //             Err(err) => Err(Simple::custom(span, err.to_string())),
-            //         }
-            //     });
-            let ip = ipv4;
+            let ipv6 = one_of("0123456789abcdefABCDEF:")
+                .repeated()
+                .collect::<String>()
+                .try_map(|ipv6, span: Span| {
+                    let ip = ipv6.parse::<Ipv6Addr>();
+                    match ip {
+                        Ok(ip) => Ok((NetworkAddress::IPAddr((V6(ip), span.clone())), span)),
+                        Err(err) => Err(Simple::<char>::custom(span, err.to_string())),
+                    }
+                });
+                
+            let ip = ipv6.or(ipv4);
             // CIDR IP Address
-            let cidr = ip
+            let cidr = ip.clone()
                 .then_ignore(just("/"))
                 .then(
                     text::int(10)
