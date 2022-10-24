@@ -76,7 +76,7 @@
 	},
 	"scripts": {
 		"vscode:prepublish": "npm run compile",
-		"compile": "tsc -b && cargo build",
+		"compile": "tsc -b && cargo build --release",
 		"watch": "tsc -b -w",
 		"lint": "eslint ./client/src --ext .ts,.tsx",
 		"postinstall": "cd client && npm install && cd .. && cargo build",

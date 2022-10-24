@@ -1,13 +1,13 @@
 use std::collections::HashMap;
 
-use chumsky::Parser;
+use chumsky::{Parser, Span};
 use dashmap::DashMap;
 use meerkat::completion::{get_completion, Keyword};
 use meerkat::hover::get_hover;
 use meerkat::reference::get_reference;
 use meerkat::rule::{AST, Rule};
 use meerkat::semantic_token::{LEGEND_TYPE, ImCompleteSemanticToken, semantic_token_from_rule};
-use ropey::Rope;
+use ropey::{Rope, RopeSlice};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use tower_lsp::jsonrpc::Result;
@@ -467,18 +467,19 @@ impl Backend {
             .insert(params.uri.to_string(), rope.clone());
         
         let mut semantic_tokens = vec![];
-        let mut errors = vec![];
+        let mut errors = HashMap::new();
         let mut ast = AST{ rules: HashMap::with_capacity(rope.len_lines())};
 
         rope.lines().enumerate().for_each(|(line_num, line)| {
-            if line.len_chars() <= 1 {
+            if line_length_padded(line) <= 1 {
                 return;
             }
             if line.to_string().starts_with("#") {
                 let line_offset = rope.line_to_char(line_num);
+                let line_length = line.len_chars();
                 semantic_tokens.push(ImCompleteSemanticToken {
                     start: line_offset,
-                    length: usize::MAX,
+                    length: line_length,
                     token_type: LEGEND_TYPE
                         .iter()
                         .position(|item| item == &SemanticTokenType::COMMENT)
@@ -492,15 +493,17 @@ impl Backend {
                 semantic_token_from_rule(&rule, &line_offset, &mut semantic_tokens);
 
                 ast.rules.insert(line_num as u32, rule);
-            }
-            errors.extend(rule_err.into_iter());
+            };
+            rule_err.into_iter().for_each(|err| {
+                errors.insert(line_num, err);
+            });
         });
         self.client
             .log_message(MessageType::INFO, format!("{:?}", errors))
             .await;
         let diagnostics = errors
             .into_iter()
-            .filter_map(|item| {
+            .filter_map(|(line_num, item)| {
                 let (message, span) = match item.reason() {
                     chumsky::error::SimpleReason::Unclosed { span, delimiter } => {
                         (format!("Unclosed delimiter {}", delimiter), span.clone())
@@ -534,8 +537,8 @@ impl Backend {
                     // let start_line = rope.try_char_to_line(span.start)?;
                     // let first_char = rope.try_line_to_char(start_line)?;
                     // let start_column = span.start - first_char;
-                    let start_position = offset_to_position(span.start, &rope)?;
-                    let end_position = offset_to_position(span.end, &rope)?;
+                    let start_position = Position { line: line_num as u32, character: span.start() as u32 };
+                    let end_position = Position { line: line_num as u32, character: span.end() as u32 };
                     // let end_line = rope.try_char_to_line(span.end)?;
                     // let first_char = rope.try_line_to_char(end_line)?;
                     // let end_column = span.end - first_char;
@@ -588,4 +591,14 @@ fn offset_to_position(offset: usize, rope: &Rope) -> Option<Position> {
     let first_char = rope.try_line_to_char(line).ok()?;
     let column = offset - first_char;
     Some(Position::new(line as u32, column as u32))
+}
+
+fn line_length_padded(line: RopeSlice) -> u32 {
+    let ret = 0;
+    line.chars().for_each(|c| {
+        if !c.is_whitespace() {
+            ret+= 1;
+        }
+    });
+    ret
 }
