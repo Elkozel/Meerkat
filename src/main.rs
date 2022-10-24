@@ -139,12 +139,6 @@ impl LanguageServer for Backend {
                 .collect::<Vec<_>>();
             Some(semantic_tokens)
         }();
-        self.client
-            .log_message(
-                MessageType::LOG,
-                format!("All tokens: {:?}", semantic_tokens),
-            )
-            .await;
         if let Some(semantic_token) = semantic_tokens {
             return Ok(Some(SemanticTokensResult::Tokens(SemanticTokens {
                 result_id: None,
@@ -238,19 +232,18 @@ impl LanguageServer for Backend {
             let ast = self.ast_map.get(&uri.to_string())?;
             let rope = self.document_map.get(&uri.to_string())?;
             let mut ret = vec![];
-            ast.rules.iter().for_each(|(_, (rule, rule_span))| {
-                let line_nr = rope.char_to_line(rule_span.start);
-                let line = rope.get_line(line_nr);
+            ast.rules.iter().for_each(|(line_nr, (rule, rule_span))| {
+                let line = rope.get_line(line_nr.clone() as usize);
                 if let Some(line) = line {
                     let formatted_rule = rule.to_string();
                     if line.to_string() != formatted_rule {
                         let start_range = Position {
-                            line: line_nr as u32,
+                            line: line_nr.clone(),
                             character: 0,
                         };
                         let end_range = Position {
-                            line: line_nr as u32,
-                            character: 0,
+                            line: line_nr.clone(),
+                            character: u32::MAX,
                         };
                         ret.push(TextEdit {
                             range: Range {
@@ -556,14 +549,8 @@ impl Backend {
             .await;
             
             self.ast_map.insert(params.uri.to_string(), ast);
-        self.client
-            .log_message(MessageType::INFO, &format!("{:?}", semantic_tokens))
-            .await;
         self.semantic_token_map
             .insert(params.uri.to_string(), semantic_tokens);
-        self.client
-            .log_message(MessageType::INFO, &format!("AST: {:?}", self.ast_map))
-            .await;
     }
 }
 

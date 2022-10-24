@@ -5,6 +5,8 @@ use std::{
     ops::Deref,
 };
 
+use chumsky::primitive::Container;
+
 pub type Span = std::ops::Range<usize>;
 pub type Spanned<T> = (T, Span);
 
@@ -104,17 +106,21 @@ impl PartialEq for Header {
 }
 impl Eq for Header {}
 impl Header {
-    pub fn find_address_variables(&self, name: &Option<String>, variables: &mut Vec<Spanned<String>>) {
+    pub fn find_address_variables(
+        &self,
+        name: &Option<String>,
+        variables: &mut Vec<Spanned<String>>,
+    ) {
         let (source, _) = &self.source;
         source.find_variables_with_array(name, variables);
         let (destination, _) = &self.destination;
-        destination.find_variables_with_array(name,  variables);
+        destination.find_variables_with_array(name, variables);
     }
     pub fn find_port_variables(&self, name: &Option<String>, variables: &mut Vec<Spanned<String>>) {
         let (source_port, _) = &self.source_port;
         source_port.find_variables_with_array(name, variables);
         let (destination_port, _) = &self.destination_port;
-        destination_port.find_variables_with_array(name,  variables);
+        destination_port.find_variables_with_array(name, variables);
     }
 }
 
@@ -184,7 +190,11 @@ impl NetworkAddress {
             Some(ret)
         }
     }
-    fn find_variables_with_array(&self, name: &Option<String>, vector: &mut Vec<Spanned<String>>) -> () {
+    fn find_variables_with_array(
+        &self,
+        name: &Option<String>,
+        vector: &mut Vec<Spanned<String>>,
+    ) -> () {
         match &self {
             NetworkAddress::Any => (),
             NetworkAddress::IPAddr(_) => (),
@@ -195,13 +205,17 @@ impl NetworkAddress {
             NetworkAddress::NegIP(ip) => ip.deref().0.find_variables_with_array(name, vector),
             NetworkAddress::IPVariable(var) => {
                 match name {
-                    Some(name) => {if *name == var.0 {
+                    Some(name) => {
+                        if *name == var.0 {
+                            vector.push(var.clone());
+                        }
+                    }
+                    None => {
                         vector.push(var.clone());
-                    }},
-                    None => {vector.push(var.clone());},
+                    }
                 };
             }
-            _ => ()
+            _ => (),
         }
     }
 }
@@ -214,7 +228,7 @@ pub enum NetworkPort {
     PortRange(Spanned<u16>, Spanned<u16>),
     PortOpenRange(Spanned<u16>, bool),
     NegPort(Box<Spanned<NetworkPort>>),
-    PortVar(Spanned<String>)
+    PortVar(Spanned<String>),
 }
 
 impl fmt::Display for NetworkPort {
@@ -245,7 +259,7 @@ impl fmt::Display for NetworkPort {
             }
             NetworkPort::PortVar((port_name, span)) => {
                 write!(f, "${}", port_name)
-            },
+            }
         }
     }
 }
@@ -259,20 +273,28 @@ impl NetworkPort {
             Some(ret)
         }
     }
-    fn find_variables_with_array(&self, name: &Option<String>, vector: &mut Vec<Spanned<String>>) -> () {
+    fn find_variables_with_array(
+        &self,
+        name: &Option<String>,
+        vector: &mut Vec<Spanned<String>>,
+    ) -> () {
         match &self {
             NetworkPort::PortGroup(group) => group.iter().for_each(|(port, _)| {
-                    port.find_variables_with_array(name, vector);
-                }),
+                port.find_variables_with_array(name, vector);
+            }),
             NetworkPort::NegPort(port) => port.deref().0.find_variables_with_array(name, vector),
             NetworkPort::PortVar(var) => {
-                    match name {
-                        Some(name) => {if *name == var.0 {
+                match name {
+                    Some(name) => {
+                        if *name == var.0 {
                             vector.push(var.clone());
-                        }},
-                        None => {vector.push(var.clone());},
-                    };
-            },
+                        }
+                    }
+                    None => {
+                        vector.push(var.clone());
+                    }
+                };
+            }
             _ => (),
         }
     }
@@ -297,9 +319,7 @@ impl PartialEq for NetworkPort {
             (NetworkPort::NegPort(port1), NetworkPort::NegPort(port2)) => {
                 port1.as_ref().0 == port2.as_ref().0
             }
-            (NetworkPort::PortVar(var1), NetworkPort::PortVar(var2)) => {
-                var1.0 == var2.0
-            }
+            (NetworkPort::PortVar(var1), NetworkPort::PortVar(var2)) => var1.0 == var2.0,
             _ => false,
         }
     }
@@ -337,7 +357,10 @@ impl fmt::Display for RuleOption {
             RuleOption::KeywordPair((key, _), op) => {
                 let options = op
                     .iter()
-                    .map(|(option, _)| option.to_string())
+                    .map(|(option, _)| {
+                        option
+                            .to_string()
+                    })
                     .collect::<Vec<String>>();
                 write!(f, "{}: {}", key, options.join(", "))
             }
@@ -375,7 +398,10 @@ pub enum OptionsVariable {
 impl fmt::Display for OptionsVariable {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            OptionsVariable::String((string, _)) => write!(f, "\"{}\"", string),
+            OptionsVariable::String((string, _)) => write!(f, "\"{}\"", string
+                            .replace("\\", "\\\\")
+                            .replace("\"", "\\\"")
+                            .replace(";", "\\;")),
             OptionsVariable::Other((string, _)) => write!(f, "{}", string),
         }
     }
