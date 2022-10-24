@@ -594,7 +594,7 @@ fn offset_to_position(offset: usize, rope: &Rope) -> Option<Position> {
 }
 
 fn line_length_padded(line: RopeSlice) -> u32 {
-    let ret = 0;
+    let mut ret = 0;
     line.chars().for_each(|c| {
         if !c.is_whitespace() {
             ret+= 1;

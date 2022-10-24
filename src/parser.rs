@@ -1,9 +1,10 @@
 use chumsky::prelude::*;
 use std::net::Ipv4Addr;
-use std::{net::IpAddr::V4, ops::Range};
+use std::net::Ipv6Addr;
+use std::{net::IpAddr::V4, net::IpAddr::V6, ops::Range};
 
 use crate::rule::{
-    Header, NetworkAddress, NetworkDirection, NetworkPort, OptionsVariable, Rule, RuleOption, Span
+    Header, NetworkAddress, NetworkDirection, NetworkPort, OptionsVariable, Rule, RuleOption, Span,
 };
 
 impl Rule {
@@ -20,6 +21,7 @@ impl Rule {
         action
             .then(Header::parser().padded())
             .then(options)
+            .then_ignore(end())
             .map_with_span(|((action, header), options), span| {
                 (
                     Rule {
@@ -84,17 +86,29 @@ impl NetworkAddress {
             let ipv4 = digit
                 .separated_by(just("."))
                 .exactly(4)
-                .map_with_span(|ip, span| {
+                .map_with_span(|ipv4, span| {
                     (
                         NetworkAddress::IPAddr((
-                            V4(Ipv4Addr::new(ip[0], ip[1], ip[2], ip[3])),
+                            V4(Ipv4Addr::new(ipv4[0], ipv4[1], ipv4[2], ipv4[3])),
                             span.clone(),
                         )),
                         span,
                     )
                 });
+            // let ipv6 = text::int(16)
+            //     .or(just(":").or(just("::")))
+            //     .repeated()
+            //     .collect::<String>()
+            //     .try_map(|ipv6, span: Span| {
+            //         let ip = ipv6.parse::<Ipv6Addr>();
+            //         match ip {
+            //             Ok(ip) => Ok((NetworkAddress::IPAddr((V6(ip), span.clone())), span)),
+            //             Err(err) => Err(Simple::custom(span, err.to_string())),
+            //         }
+            //     });
+            let ip = ipv4;
             // CIDR IP Address
-            let cidr = ipv4
+            let cidr = ip
                 .then_ignore(just("/"))
                 .then(
                     text::int(10)
@@ -110,12 +124,9 @@ impl NetworkAddress {
             // IP Group
             let ip_group = ipaddress
                 .separated_by(just(","))
+                .allow_trailing()
                 .delimited_by(just("["), just("]"))
                 .map_with_span(|ips, span| (NetworkAddress::IPGroup(ips), span));
-            // Negated port: !5
-            let negated_ip = just("!")
-                .then(ipv4.or(ip_group.clone()))
-                .map_with_span(|(_, ip), span| (NetworkAddress::NegIP(Box::new(ip)), span));
 
             let ip_variable =
                 just("$")
@@ -124,11 +135,21 @@ impl NetworkAddress {
                         (NetworkAddress::IPVariable((name, span.clone())), span)
                     });
 
+            // Negated port: !5
+            let negated_ip = just("!")
+                .then(
+                    ip_variable
+                        .or(ip_group.clone())
+                        .or(cidr.clone())
+                        .or(ip.clone()),
+                )
+                .map_with_span(|(_, ip), span| (NetworkAddress::NegIP(Box::new(ip)), span));
+
             ip_variable
                 .or(negated_ip)
                 .or(ip_group)
                 .or(cidr)
-                .or(ipv4)
+                .or(ip)
                 .or(any)
                 .padded()
         })
@@ -180,12 +201,9 @@ impl NetworkPort {
             // Port group: [1,2,3]
             let port_group = port
                 .separated_by(just(","))
+                .allow_trailing()
                 .delimited_by(just("["), just("]"))
                 .map_with_span(|ports, span| (NetworkPort::PortGroup(ports), span));
-            // Negated port: !5
-            let negated_port = just("!")
-                .then(port_number.or(port_range).or(port_group.clone()))
-                .map_with_span(|(_, ports), span| (NetworkPort::NegPort(Box::new(ports)), span));
 
             // Variable
             let port_variable =
@@ -195,8 +213,18 @@ impl NetworkPort {
                         (NetworkPort::PortVar((name, span.clone())), span)
                     });
 
-            port_variable
-                .or(negated_port)
+            // Negated port: !5
+            let negated_port = just("!")
+                .then(
+                    port_variable
+                        .or(port_group.clone())
+                        .or(port_range.clone())
+                        .or(port_number.clone()),
+                )
+                .map_with_span(|(_, ports), span| (NetworkPort::NegPort(Box::new(ports)), span));
+
+            negated_port
+                .or(port_variable)
                 .or(port_group)
                 .or(port_range)
                 .or(port_number)
@@ -222,7 +250,7 @@ impl NetworkDirection {
 
 impl RuleOption {
     fn parser() -> impl Parser<char, (RuleOption, Span), Error = Simple<char>> {
-        let escaped_chars = one_of("\";").delimited_by(just("\\"), empty());
+        let escaped_chars = one_of("\";\\").delimited_by(just("\\"), empty());
         let unescaped_value = escaped_chars
             .clone()
             .or(none_of(";,"))
@@ -242,11 +270,14 @@ impl RuleOption {
                 (OptionsVariable::String((value, span.clone())), span)
             });
 
-        let keyword = text::ident()
+        let keyword = none_of(":;)")
+            .repeated()
+            .collect::<String>()
             .padded()
             .map_with_span(|keyword, span| (keyword, span));
 
         let keyword_pair = keyword
+            .clone()
             .padded()
             .then_ignore(just(":"))
             .then(
