@@ -45,7 +45,7 @@ pub fn get_completion(
     let mut completion_tokens = vec![];
     // Get all variables (used in the document + specified externally)
     let mut all_variables = search_for_variables(ast);
-    // all_variables.extend(variables);
+    // all_variables.extend(variables); TODO
     // for options we check if the offset is between the brackets
     get_completion_for_address(&variables.0, &mut completion_tokens);
     completion_tokens

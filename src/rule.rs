@@ -19,7 +19,6 @@ use std::{
     ops::Deref,
 };
 
-use chumsky::primitive::Container;
 /// Keeps data about the range in the signatures of the object (start/end char position)
 pub type Span = std::ops::Range<usize>;
 /// Shows that a signatures part has a char range

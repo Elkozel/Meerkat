@@ -17,7 +17,7 @@ pub fn get_reference(
     let mut reference_list = vec![];
     ast.rules.iter().for_each(|(rule_line, (rule, _))| {
         // go over each rule
-        // if !include_self && rule_line == line {
+        // if !include_self && rule_line == line { TODO
         //     return;
         // }
         // get the header of the rule

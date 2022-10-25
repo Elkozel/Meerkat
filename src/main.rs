@@ -211,7 +211,6 @@ impl LanguageServer for Backend {
         let reference_list = || -> Option<Vec<Location>> {
             let uri = params.text_document_position.text_document.uri;
             let ast = self.ast_map.get(&uri.to_string())?;
-            let rope = self.document_map.get(&uri.to_string())?;
 
             let position = params.text_document_position.position;
             let col = position.character as usize;
@@ -238,7 +237,7 @@ impl LanguageServer for Backend {
             let ast = self.ast_map.get(&uri.to_string())?;
             let rope = self.document_map.get(&uri.to_string())?;
             let mut ret = vec![];
-            ast.rules.iter().for_each(|(line_nr, (rule, rule_span))| {
+            ast.rules.iter().for_each(|(line_nr, (rule, _))| {
                 let line = rope.get_line(line_nr.clone() as usize);
                 if let Some(line) = line {
                     let formatted_rule = rule.to_string();
@@ -319,7 +318,6 @@ impl LanguageServer for Backend {
         let hover_content = || -> Option<Hover> {
             let uri = params.text_document_position_params.text_document.uri;
             let ast = self.ast_map.get(&uri.to_string())?;
-            let rope = self.document_map.get(&uri.to_string())?;
 
             let position = params.text_document_position_params.position;
             let offset = position.character as usize;
@@ -408,7 +406,6 @@ impl LanguageServer for Backend {
         let workspace_edit = || -> Option<WorkspaceEdit> {
             let uri = params.text_document_position.text_document.uri;
             let ast = self.ast_map.get(&uri.to_string())?;
-            let rope = self.document_map.get(&uri.to_string())?;
 
             let position = params.text_document_position.position;
             let col = position.character as usize;
@@ -577,13 +574,6 @@ async fn main() {
     })
     .finish();
     Server::new(stdin, stdout, socket).serve(service).await;
-}
-
-fn offset_to_position(offset: usize, rope: &Rope) -> Option<Position> {
-    let line = rope.try_char_to_line(offset).ok()?;
-    let first_char = rope.try_line_to_char(line).ok()?;
-    let column = offset - first_char;
-    Some(Position::new(line as u32, column as u32))
 }
 
 fn line_length_padded(line: RopeSlice) -> u32 {
