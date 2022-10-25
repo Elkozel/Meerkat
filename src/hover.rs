@@ -30,11 +30,13 @@ fn hover_for_header(header: &Spanned<Header>, col: &usize) -> Option<Spanned<Hov
     let (header, _) = header;
 
     if header.source.1.contains(col) {
-        hover_for_address(&header.source, col);
+        hover_for_address(&header.source, col)
     } else if header.destination.1.contains(col) {
-        hover_for_address(&header.destination, col);
+        hover_for_address(&header.destination, col)
     }
-    None
+    else {
+        None
+    }
 }
 
 /// Provides hover information about a network address.
