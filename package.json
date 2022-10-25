@@ -21,40 +21,7 @@
 	"contributes": {
 		"configuration": {
 			"title": "Meerkat",
-			"properties": {
-				"meerkat.formatActiveLineOnly": {
-					"type": "boolean",
-					"default": true,
-					"description": "The formatter will only format the rule on the actively selected line."
-				},
-				"meerkat.formatSpaceAfterOption": {
-					"type": "boolean",
-					"default": true,
-					"description": "Put a space after every option.",
-					"examples": [
-						"True: ... (msg:\"(...)\"; flow:stateless; (...))",
-						"False: ... (msg:\"(...)\";flow:stateless;(...))"
-					]
-				},
-				"meerkat.formatSpaceAfterLastOption": {
-					"type": "boolean",
-					"default": false,
-					"description": "Put a space after the last option.",
-					"examples": [
-						"True: ... ((...); flow:stateless; )",
-						"False: ... ((...); flow:stateless;)"
-					]
-				},
-				"meerkat.formatSpaceAfterSemicolomnInOption": {
-					"type": "boolean",
-					"default": false,
-					"description": "Put a space after the semicolumn inside options.",
-					"examples": [
-						"True: ... (msg: \"(...)\"; flow:stateless; (...))",
-						"False: ... (msg: \"(...)\"; flow: stateless; (...))"
-					]
-				}
-			}
+			"properties": {			}
 		},
 		"commands": [
 			{

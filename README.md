@@ -1,38 +1,109 @@
-# LSP Example
+# Meerkat
 
-Heavily documented sample code for https://code.visualstudio.com/api/language-extensions/language-server-extension-guide
+Suricata/Snort formatter extension for VS Code
 
-## Functionality
-
-This Language Server works for plain text file. It has the following language features:
-- Completions
-- Diagnostics regenerated on each file change or configuration change
-
-It also includes an End-to-End test.
+Meerkat provides the following features:
+- Syntax highlighting via semantic tokens
+- Signature formatting
+- Hover information
+- Variable references/renaiming
+- Code completion (partially)
+- Rule performance statistics (TODO)
+- Code snipplets (TOOD)
+- Rule linting (TOOD)
 
 ## Structure
+Meerkat consists of three parts:
+- Parser: powered by chumsky, the signature parser promises high-speed and high-reliability signature parser.
+- Server logic: once a rule is parsed, it is analyzed to provide useful debugging and linting information to the user.
+- Language server: the tower framework is used to create a language server, which can be used by any text editor, which [supports the LSP](https://microsoft.github.io/language-server-protocol/implementors/tools/).
 
+## How to install it
+
+### Linux/Mac
+Install cargo, if you have not done already:
+```bash
+npm run install-rust
 ```
-.
-├── client // Language Client
-│   ├── src
-│   │   ├── test // End to End tests for Language Client / Server
-│   │   └── extension.ts // Language Client entry point
-├── package.json // The extension manifest.
-└── server // Language Server
-    └── src
-        └── server.ts // Language Server entry point
+*You will be propted to accept the default configuration*
+
+Install all dependencies for the project:
+```bash
+npm install
 ```
 
-## Running the Sample
+Build the project:
+```bash
+npm run compile
+```
 
-- Run `npm install` in this folder. This installs all necessary npm modules in both the client and server folder
-- Open VS Code on this folder.
-- Press Ctrl+Shift+B to start compiling the client and server in [watch mode](https://code.visualstudio.com/docs/editor/tasks#:~:text=The%20first%20entry%20executes,the%20HelloWorld.js%20file.).
-- Switch to the Run and Debug View in the Sidebar (Ctrl+Shift+D).
-- Select `Launch Client` from the drop down (if it is not already).
-- Press ▷ to run the launch config (F5).
-- If you want to debug the server as well, use the launch configuration `Attach to Server`
-- In the [Extension Development Host](https://code.visualstudio.com/api/get-started/your-first-extension#:~:text=Then%2C%20inside%20the%20editor%2C%20press%20F5.%20This%20will%20compile%20and%20run%20the%20extension%20in%20a%20new%20Extension%20Development%20Host%20window.) instance of VSCode, open a document in 'plain text' language mode.
-  - Type `j` or `t` to see `Javascript` and `TypeScript` completion.
-  - Enter text content such as `AAA aaa BBB`. The extension will emit diagnostics for all words in all-uppercase.
+Move the meerkat language server to the local bin folder (I am still looking for a better way)
+```bash
+sudo cp ./target/release/meerkat /usr/local/bin/
+```
+
+Pack the extenssion:
+```bash
+# install the vs code packing tool
+npm install -g vsce
+# package the extenssion
+vsce package
+```
+
+At the end you should have a file named meerkat.vsix, which can be opened by VSCode
+
+### Windows
+WIP
+
+## Suricata signatures
+
+### Docs
+The [suricata documentation](https://suricata.readthedocs.io/en/suricata-6.0.0/rules/intro.html#rule-options) was used for a deeper understanding of the sturcture and function of suricata rules
+
+### Grammar
+The following grammar was used to implement a praser for the rules:
+```
+<Rule> ::= <action> " " <header> " " "(" <options> ")"
+<action> ::= "alert" | "pass" | "drop" | "reject" | "rejectsrc" | "rejectdst" | "rejectboth"
+<header> ::= <protocol> " " <IPAddress> " " <port> " " <direction> " " <IPAddress> " " <port>
+
+<protocol> ::= [a-z]+
+
+/* Handling IP Addresses */
+<IPAddress> ::= <IPRange> | <NegatedIP> | <IPGroup> | <variable> | "any"
+
+<IPGroup> ::= "[" <IPAddress> ("," <IPAddress>)* "]"
+/* any number containing 1 to 3 digits */
+<IPQuart> ::= ([0-9] [0-9]? [0-9]?)
+/* any 4 numbers separated by dots*/
+<IP> ::= <IPQuart> "." <IPQuart> "." <IPQuart> "." <IPQuart>
+/* CIDR */
+<IPRange> ::= <IP> "\\" ([0-9] [0-9]?) 
+<NegatedIP> ::= "!" (<IP> | <IPRange> | <IPGroup> | <variable>)
+<variable> ::= "$" ([a-z] [A-Z] "-" "_")+
+
+/* Handling ports */
+<port> ::= <portNumber> | <portGroup> | "any"
+
+<portNumber> ::= ([0-9] [0-9]? [0-9]? [0-9]? [0-9]?)
+<portRange> ::= <portNumber> ":" <portNumber>?
+<negatedPort> ::= "!" (<portNumber> | <portRange> | <portGroup>)
+<portGroup> ::= "[" <port> ("," <port>)* "]"
+
+/* Directions */
+<direction> ::= "->" | "<>" | "<-"
+
+
+<options> ::= <option>+
+<option> ::= <keyword> ":" <settings> ";" | <keyword> ";"
+<keyword> ::= ([a-z] [A-Z] "_" "-")+
+<settings> ::= ([a-z] [A-Z] "_" "-")+ | (<settings> ("," <settings>)+)
+```
+
+## I want to contribute
+You can easily contribute by reporting issues to the Git page of the project
+
+If you want to contribute by writing code, the rust docs for the project is a perfect location to start at, just run:
+```bash
+cargo doc --open
+```
