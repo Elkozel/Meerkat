@@ -1,3 +1,17 @@
+//! Rule structs
+//!
+//! This module houses all the structures and basic functionallity for every rule
+//! The structure follows the structure explained in the [^suricata docs]://!
+//! ```
+//! A rule/signature consists of the following:
+//! - The action, that determines what happens when the signature matches
+//! - The header, defining the protocol, IP addresses, ports and direction of the rule.
+//! - The rule options, defining the specifics of the rule.
+//! ```
+//!
+//! Furthermore, additionnal types are introduced to track the span of every part of the signatures
+//!
+//! [^suricata docs]: https://suricata.readthedocs.io/en/suricata-6.0.0/rules/intro.html
 use std::{
     collections::{HashMap, HashSet},
     fmt,
@@ -6,21 +20,28 @@ use std::{
 };
 
 use chumsky::primitive::Container;
-
+/// Keeps data about the range in the signatures of the object (start/end char position)
 pub type Span = std::ops::Range<usize>;
+/// Shows that a signatures part has a char range
 pub type Spanned<T> = (T, Span);
 
+/// Represents a given rulefile with a set of signatures, howver it does not have a tree structure.
+///
+/// As every file has a number of signatures and there could be only one signature by line, it is
+/// only logical that the storage structure also is represented in the same way.
 #[derive(Debug, PartialEq, Eq)]
 pub struct AST {
     pub rules: HashMap<u32, (Rule, Span)>,
 }
 
+/// Represents a single signature(or rule)
 #[derive(Debug, Hash, Clone)]
 pub struct Rule {
     pub action: Spanned<String>,
     pub header: Spanned<Header>,
     pub options: Vec<Spanned<RuleOption>>,
 }
+/// Print formatted rule
 impl fmt::Display for Rule {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
@@ -47,25 +68,31 @@ impl PartialEq for Rule {
 }
 impl Eq for Rule {}
 impl Rule {
+    /// Get the source network address from the header
     pub fn source(&self) -> &Spanned<NetworkAddress> {
         let (header, _) = &self.header;
         &header.source
     }
+    /// Get the source network port from the header
     pub fn source_port(&self) -> &Spanned<NetworkPort> {
         let (header, _) = &self.header;
         &header.source_port
     }
+    /// Get the destination network address from the header
     pub fn destination(&self) -> &Spanned<NetworkAddress> {
         let (header, _) = &self.header;
         &header.destination
     }
+    /// Get the destination network port from the header
     pub fn destination_port(&self) -> &Spanned<NetworkPort> {
         let (header, _) = &self.header;
         &header.destination_port
     }
+    /// Get all network address from the header
     pub fn addresses(&self) -> Vec<&Spanned<NetworkAddress>> {
         vec![self.source(), self.destination()]
     }
+    /// Get all network ports from the header
     pub fn ports(&self) -> Vec<&Spanned<NetworkPort>> {
         vec![self.source_port(), self.destination_port()]
     }
@@ -106,19 +133,27 @@ impl PartialEq for Header {
 }
 impl Eq for Header {}
 impl Header {
+    /// Find all variables, which are located inside the source or the destiantion
+    /// fields of the header
     pub fn find_address_variables(
         &self,
         name: &Option<String>,
         variables: &mut Vec<Spanned<String>>,
     ) {
+        // Unwrap the source network address
         let (source, _) = &self.source;
         source.find_variables_with_array(name, variables);
+
+        // Unwrap the dedstination network address
         let (destination, _) = &self.destination;
         destination.find_variables_with_array(name, variables);
     }
     pub fn find_port_variables(&self, name: &Option<String>, variables: &mut Vec<Spanned<String>>) {
+        // Unwrap the source network port
         let (source_port, _) = &self.source_port;
         source_port.find_variables_with_array(name, variables);
+
+        // Unwrap the dedstination network port
         let (destination_port, _) = &self.destination_port;
         destination_port.find_variables_with_array(name, variables);
     }
@@ -264,6 +299,7 @@ impl fmt::Display for NetworkPort {
     }
 }
 impl NetworkPort {
+    /// Find all variables inside the network port struct
     pub fn find_variables(&self, name: &Option<String>) -> Option<Vec<Spanned<String>>> {
         let mut ret: Vec<Spanned<String>> = vec![];
         self.find_variables_with_array(name, &mut ret);
@@ -273,6 +309,7 @@ impl NetworkPort {
             Some(ret)
         }
     }
+    /// Same as ["find_variables"], however all results are pushed to the array.
     fn find_variables_with_array(
         &self,
         name: &Option<String>,
@@ -357,10 +394,7 @@ impl fmt::Display for RuleOption {
             RuleOption::KeywordPair((key, _), op) => {
                 let options = op
                     .iter()
-                    .map(|(option, _)| {
-                        option
-                            .to_string()
-                    })
+                    .map(|(option, _)| option.to_string())
                     .collect::<Vec<String>>();
                 write!(f, "{}: {}", key, options.join(", "))
             }
@@ -389,6 +423,17 @@ impl PartialEq for RuleOption {
 }
 impl Eq for RuleOption {}
 
+/// Represents a variable inside the options of a signature
+/// 
+/// This is not based on the suricata docs, but based of regular observations
+/// The current enum has only two possibilities:
+/// - a string, in the format "..."
+/// - anything else
+/// 
+/// This destinction was made since inside a string the special chars are escaped
+/// For more info, please see the [surcata docs].
+/// 
+/// [surcata docs]: https://suricata.readthedocs.io/en/suricata-6.0.0/rules/meta.html?highlight=escaped#msg-message
 #[derive(Debug, Hash, Clone, PartialEq, Eq)]
 pub enum OptionsVariable {
     String(Spanned<String>),
@@ -398,10 +443,14 @@ pub enum OptionsVariable {
 impl fmt::Display for OptionsVariable {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            OptionsVariable::String((string, _)) => write!(f, "\"{}\"", string
-                            .replace("\\", "\\\\")
-                            .replace("\"", "\\\"")
-                            .replace(";", "\\;")),
+            OptionsVariable::String((string, _)) => write!(
+                f,
+                "\"{}\"",
+                string
+                    .replace("\\", "\\\\")
+                    .replace("\"", "\\\"")
+                    .replace(";", "\\;")
+            ),
             OptionsVariable::Other((string, _)) => write!(f, "{}", string),
         }
     }
