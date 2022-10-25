@@ -21,10 +21,10 @@ export function activate(context: ExtensionContext) {
 		window.showInformationMessage("Meerkat is here!");
 	});
   
-	context.subscriptions.push( hello);
+	context.subscriptions.push(hello);
 
 	const traceOutputChannel = window.createOutputChannel("Meerkat Language Server trace");
-	const command = process.env.SERVER_PATH || "meerkat";
+	const command = process.env.SERVER_PATH || path.join(__dirname, "../../target/release/meerkat");
 	const run: Executable = {
 		command,
 		options: {
