@@ -32,16 +32,6 @@ Install all dependencies for the project:
 npm install
 ```
 
-Build the project:
-```bash
-npm run compile
-```
-
-Move the meerkat language server to the local bin folder (I am still looking for a better way)
-```bash
-sudo cp ./target/release/meerkat /usr/local/bin/
-```
-
 Pack the extenssion:
 ```bash
 # install the vs code packing tool
@@ -49,6 +39,7 @@ npm install -g vsce
 # package the extenssion
 vsce package
 ```
+*The script will also move the meerkat language server to the local bin folder (I am still looking for a better way)*
 
 At the end you should have a file named meerkat.vsix, which can be opened by VSCode
 
