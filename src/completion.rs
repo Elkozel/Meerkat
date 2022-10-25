@@ -1,3 +1,7 @@
+//! Provides the completion logic for the language server
+//! 
+//! The completion logic analyzes which part of the rule is needed to be 
+//! completed and then provides the nessassary options
 use std::collections::HashMap;
 
 use ropey::RopeSlice;
@@ -5,6 +9,7 @@ use tower_lsp::lsp_types::{CompletionItem, CompletionItemKind};
 
 use crate::rule::AST;
 
+/// A CSV record, obtained from the suricata cli
 #[derive(Debug, Clone)]
 pub struct KeywordRecord {
     pub name: String,
@@ -22,12 +27,14 @@ impl KeywordRecord {
     }
 }
 
+/// An abstraction layer for the [KeywordRecord] struct
 #[derive(Debug)]
 pub enum Keyword {
     NoOption(KeywordRecord),
     Other(KeywordRecord),
 }
 
+/// Fetches the completion options for the signature
 pub fn get_completion(
     line: &RopeSlice,
     ast: &AST,
@@ -44,6 +51,7 @@ pub fn get_completion(
     completion_tokens
 }
 
+/// Get completion options for Network addresses (IPs, variables, etc.)
 pub fn get_completion_for_address(
     variables: &Vec<String>,
     completion_tokens: &mut Vec<CompletionItem>,
@@ -84,6 +92,7 @@ pub fn get_completion_for_address(
     });
 }
 
+/// Get completion for network ports
 pub fn get_completion_for_port(
     variables: &Vec<String>,
     completion_tokens: &mut Vec<CompletionItem>,
@@ -91,6 +100,11 @@ pub fn get_completion_for_port(
     todo!();
 }
 
+
+/// Get completion for the options inside the signature
+/// 
+/// Currently, onlt completion of the keywords is provided, however this 
+/// functionallity could be extended for specific values per keyword
 pub fn get_completion_for_option_keywords(
     keywords: &HashMap<String, Keyword>,
     completion_tokens: &mut Vec<CompletionItem>,
@@ -113,6 +127,7 @@ pub fn get_completion_for_option_keywords(
     })
 }
 
+/// generic function to fetch the port of a certain protocol.
 fn get_port_by_protocol(protocol: String) -> Vec<u16> {
     match protocol.as_str() {
         "HTTP" => vec![80, 443],

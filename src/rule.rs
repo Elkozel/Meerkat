@@ -1,7 +1,7 @@
 //! Rule structs
 //!
 //! This module houses all the structures and basic functionallity for every rule
-//! The structure follows the structure explained in the [^suricata docs]://!
+//! The structure follows the structure explained in the [suricata docs]
 //! ```
 //! A rule/signature consists of the following:
 //! - The action, that determines what happens when the signature matches
@@ -11,7 +11,7 @@
 //!
 //! Furthermore, additionnal types are introduced to track the span of every part of the signatures
 //!
-//! [^suricata docs]: https://suricata.readthedocs.io/en/suricata-6.0.0/rules/intro.html
+//! [suricata docs]: https://suricata.readthedocs.io/en/suricata-6.0.0/rules/intro.html
 use std::{
     collections::{HashMap, HashSet},
     fmt,
@@ -98,6 +98,7 @@ impl Rule {
     }
 }
 
+/// Represents a signature header
 #[derive(Debug, Hash, Clone)]
 pub struct Header {
     pub protocol: Spanned<String>,
@@ -159,6 +160,7 @@ impl Header {
     }
 }
 
+/// Represents a network address (IP, CIDR range, groups of IPs, variables, etc.)
 #[derive(Debug, Hash, Clone)]
 pub enum NetworkAddress {
     Any,
@@ -255,12 +257,17 @@ impl NetworkAddress {
     }
 }
 
+/// Represents a network port (along with ranges of ports, variables, etc.)
 #[derive(Debug, Hash, Clone)]
 pub enum NetworkPort {
     Any,
     Port(u16),
     PortGroup(Vec<Spanned<NetworkPort>>),
     PortRange(Spanned<u16>, Spanned<u16>),
+    /// Specifies an open range.
+    /// 
+    /// the first variable specifies the port, while the second whether it is
+    /// open towards up or down.
     PortOpenRange(Spanned<u16>, bool),
     NegPort(Box<Spanned<NetworkPort>>),
     PortVar(Spanned<String>),
@@ -309,7 +316,7 @@ impl NetworkPort {
             Some(ret)
         }
     }
-    /// Same as ["find_variables"], however all results are pushed to the array.
+    /// Same as [find_variables], however all results are pushed to the array.
     fn find_variables_with_array(
         &self,
         name: &Option<String>,
@@ -363,11 +370,13 @@ impl PartialEq for NetworkPort {
 }
 impl Eq for NetworkPort {}
 
+/// Represents the networking direction
 #[derive(Debug, Hash, Clone, PartialEq, Eq)]
 pub enum NetworkDirection {
     SrcToDst,
     Both,
     DstToSrc,
+    /// represents any unrecognized direction
     Unrecognized(String),
 }
 
@@ -382,6 +391,7 @@ impl fmt::Display for NetworkDirection {
     }
 }
 
+/// Represents a single option inside the signature (buffer or key-value pair)
 #[derive(Debug, Hash, Clone)]
 pub enum RuleOption {
     KeywordPair(Spanned<String>, Vec<Spanned<OptionsVariable>>),

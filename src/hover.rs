@@ -1,3 +1,8 @@
+//! Provides the hover logic for the language server
+//! 
+//! The hover logic provides additional information:
+//! - IP start and end on IP ranges
+//! - Description and Documentation for keywords
 use std::collections::HashMap;
 
 use ipnet::IpNet;
@@ -8,6 +13,7 @@ use crate::{
     rule::{Header, NetworkAddress, RuleOption, Span, Spanned, AST},
 };
 
+/// Provides hover information
 pub fn get_hover(
     ast: &AST,
     line: &u32,
@@ -19,6 +25,7 @@ pub fn get_hover(
     hover_for_header(&rule.header, col).or(hover_for_options(&rule.options, col, keywords))
 }
 
+/// Provides a hover information for a header
 fn hover_for_header(header: &Spanned<Header>, col: &usize) -> Option<Spanned<HoverContents>> {
     let (header, _) = header;
 
@@ -30,9 +37,11 @@ fn hover_for_header(header: &Spanned<Header>, col: &usize) -> Option<Spanned<Hov
     None
 }
 
+/// Provides hover information about a network address.
+/// See [rule]
 fn hover_for_address(
     address: &Spanned<NetworkAddress>,
-    offset: &usize,
+    col: &usize,
 ) -> Option<Spanned<HoverContents>> {
     let (address, span) = address;
     match address {
@@ -52,24 +61,25 @@ fn hover_for_address(
             }
         }
         NetworkAddress::IPGroup(group) => {
-            let ip = group.iter().find(|(_, span)| span.contains(offset))?;
-            hover_for_address(ip, offset)
+            let ip = group.iter().find(|(_, span)| span.contains(col))?;
+            hover_for_address(ip, col)
         }
-        NetworkAddress::NegIP(ip) => hover_for_address(ip.as_ref(), offset),
+        NetworkAddress::NegIP(ip) => hover_for_address(ip.as_ref(), col),
         NetworkAddress::IPVariable(_) => None,
     }
 }
 
+/// Provides hover information for options of the rule
 fn hover_for_options(
     options: &Vec<Spanned<RuleOption>>,
-    offset: &usize,
+    col: &usize,
     keywords: &HashMap<String, Keyword>,
 ) -> Option<Spanned<HoverContents>> {
     let (option, _) = options
         .iter()
-        .find(|(_, option_span)| option_span.contains(offset))?;
+        .find(|(_, option_span)| option_span.contains(col))?;
     match option {
-        RuleOption::KeywordPair((keyword, span), _) if span.contains(offset) => {
+        RuleOption::KeywordPair((keyword, span), _) if span.contains(col) => {
             get_contents_for_keyword(&keyword, keywords, span)
         }
         RuleOption::Buffer((keyword, span)) => get_contents_for_keyword(&keyword, keywords, span),
@@ -77,6 +87,7 @@ fn hover_for_options(
     }
 }
 
+/// Fetches the hover information for a certain keyword
 fn get_contents_for_keyword(
     keyword: &String,
     keywords: &HashMap<String, Keyword>,

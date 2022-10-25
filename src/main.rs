@@ -1,3 +1,9 @@
+//! Provides all functionallity for the language server
+//! 
+//! This code is lightly modified from the [boilerplate code] provided 
+//! by IWANABETHATGUY.
+//! 
+//! [boilerplate code]: https://github.com/IWANABETHATGUY/tower-lsp-boilerplate
 use std::collections::HashMap;
 
 use chumsky::{Parser, Span};
