@@ -464,6 +464,3 @@ impl fmt::Display for OptionsVariable {
         }
     }
 }
-    }
-    }
-}
