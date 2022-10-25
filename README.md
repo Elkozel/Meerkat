@@ -35,7 +35,7 @@ npm install
 Pack the extenssion:
 ```bash
 # install the vs code packing tool
-npm install -g vsce
+sudo npm install -g vsce
 # package the extenssion
 vsce package
 ```
