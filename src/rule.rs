@@ -52,7 +52,7 @@ impl fmt::Display for Rule {
                 .iter()
                 .map(|(option, _)| option.to_string())
                 .collect::<Vec<String>>()
-                .join(";")
+                .join("; ")
         )
     }
 }

@@ -214,7 +214,7 @@ impl LanguageServer for Backend {
 
             let position = params.text_document_position.position;
             let col = position.character as usize;
-            let reference_list = get_reference(&ast, &position.line, &col, false)?;
+            let reference_list = get_reference(&ast, &position.line, &col)?;
             let ret = reference_list
                 .into_iter()
                 .filter_map(|(line, (_, range))| {
@@ -409,7 +409,7 @@ impl LanguageServer for Backend {
 
             let position = params.text_document_position.position;
             let col = position.character as usize;
-            let reference_list = get_reference(&ast, &position.line, &col, true)?;
+            let reference_list = get_reference(&ast, &position.line, &col)?;
             let new_name = params.new_name;
             if reference_list.len() > 0 {
                 let edit_list = reference_list
@@ -419,7 +419,7 @@ impl LanguageServer for Backend {
                         let end_position = Position::new(line, range.end as u32);
                         Some(TextEdit::new(
                             Range::new(start_position, end_position),
-                            new_name.clone(),
+                            format!("${}", new_name),
                         ))
                     })
                     .collect::<Vec<_>>();
