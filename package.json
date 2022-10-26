@@ -21,7 +21,7 @@
 	"contributes": {
 		"configuration": {
 			"title": "Meerkat",
-			"properties": {			}
+			"properties": {}
 		},
 		"commands": [
 			{
@@ -30,16 +30,18 @@
 				"shortTitle": "Meerkat: Hello world!"
 			}
 		],
-		"languages": [{
-			"id": "suricata",
-			"aliases": [
-				"Suricata"
-			],
-			"extensions": [
-				"rules"
-			],
-			"configuration": "./language-configuration.json"
-		}]
+		"languages": [
+			{
+				"id": "suricata",
+				"aliases": [
+					"Suricata"
+				],
+				"extensions": [
+					"rules"
+				],
+				"configuration": "./language-configuration.json"
+			}
+		]
 	},
 	"scripts": {
 		"vscode:prepublish": "npm run compile",
@@ -52,13 +54,14 @@
 		"cargo-install": "cargo build"
 	},
 	"devDependencies": {
-		"@types/vscode": "^1.71.0",
 		"@types/mocha": "^9.1.0",
 		"@types/node": "^16.11.7",
+		"@types/vscode": "^1.71.0",
 		"@typescript-eslint/eslint-plugin": "^5.30.0",
 		"@typescript-eslint/parser": "^5.30.0",
 		"eslint": "^8.13.0",
 		"mocha": "^9.2.1",
-		"typescript": "^4.8.4"
+		"typescript": "^4.8.4",
+		"vsce": "^2.13.0"
 	}
 }
