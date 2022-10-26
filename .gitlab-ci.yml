@@ -3,21 +3,27 @@
 # https://hub.docker.com/r/library/rust/tags/
 image: "rust:latest"
 stages:
-    - build
+    - build client
+    - compile server
     - package
 
 before_script:
     - "npm install"
 
 # Use npm to build the project
-build:
-    stage: build
+build_client:
+    stage: build client
     script:
-        - npm run compile
+        - tsc -b
+
+# Use cargo to compile server
+compile_server:
+    stage: compile server
+    script:
+        - cargo build --release # because optimized build can be reused in next stage
 
 # Use vscode package tool to package the extenssion
 package:
     stage: package
     script:
-        - npm install -g vsce
-        - vsce package
+        - npx vsce package
