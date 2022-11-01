@@ -44,6 +44,7 @@ impl LanguageServer for Backend {
                     trigger_characters: Some(vec![
                         "$".to_string(),
                         "; ".to_string(),
+                        "(".to_string()
                     ]),
                     work_done_progress_options: Default::default(),
                     all_commit_characters: None,
@@ -440,7 +441,7 @@ impl LanguageServer for Backend {
             let line = rope.get_line(position.line as usize)?;
             let ast = self.ast_map.get(&uri.to_string())?;
             let offset = position.character as usize;
-            let completions = get_completion(&line, &ast, &offset, &self.variables, &self.keywords);
+            let completions = get_completion(&line, &ast, &offset, &self.variables, &self.keywords)?;
             Some(completions)
         }();
         Ok(completions.map(CompletionResponse::Array))

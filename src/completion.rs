@@ -42,7 +42,7 @@ pub fn get_completion(
     offset: &usize,
     variables: &(HashSet<String>, HashSet<String>),
     keywords: &HashMap<String, Keyword>,
-) -> Vec<CompletionItem> {
+) -> Option<Vec<CompletionItem>> {
     let mut completion_tokens = vec![];
     let mut address_variables = HashSet::new();
     let mut port_variables = HashSet::new();
@@ -50,14 +50,14 @@ pub fn get_completion(
     // Get all variables
     get_variables_from_ast(ast, &mut address_variables, &mut port_variables);
     // Generate completion tokens
-    if line.get_char(offset - 1)? == "$" {
+    if line.get_char(offset - 1)? == '$' {
         get_completion_for_address(&address_variables, &mut completion_tokens);
         get_completion_for_port(&port_variables, &mut completion_tokens);
     }
     else {
         get_completion_for_option_keywords(keywords, &mut completion_tokens);
     }
-    completion_tokens
+    Some(completion_tokens)
 }
 
 enum Uncompleted {
@@ -101,10 +101,10 @@ pub fn get_completion_for_address(
     // Push variables
     variables.iter().for_each(|var| {
         completion_tokens.push(CompletionItem {
-            label: var.clone(),
+            label: format!("${}", var),
             insert_text: Some(var.clone()),
             kind: Some(CompletionItemKind::VARIABLE),
-            detail: Some(var.clone()),
+            detail: Some("Network address variable".to_string()),
             ..Default::default()
         })
     });
@@ -118,10 +118,10 @@ pub fn get_completion_for_port(
     // push variables
     variables.into_iter().for_each(|var| {
         completion_tokens.push(CompletionItem {
-            label: var.clone(),
+            label: format!("${}", var),
             insert_text: Some(var.clone()),
             kind: Some(CompletionItemKind::VARIABLE),
-            detail: Some(var.clone()),
+            detail: Some("Network port variable".to_string()),
             ..Default::default()
         })
     })
