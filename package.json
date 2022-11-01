@@ -11,7 +11,8 @@
 		"language support"
 	],
 	"engines": {
-		"vscode": "^1.71.0"
+		"vscode": "^1.71.0",
+		"node": ">=0.14.0"
 	},
 	"activationEvents": [
 		"onLanguage:suricata",
