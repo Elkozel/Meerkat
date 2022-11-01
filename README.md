@@ -32,12 +32,9 @@ Install all dependencies for the project:
 npm install
 ```
 
-Pack the extenssion:
+Package the extenssion:
 ```bash
-# install the vs code packing tool
-sudo npm install -g vsce
-# package the extenssion
-vsce package
+npx vsce package
 ```
 *The script will also move the meerkat language server to the local bin folder (I am still looking for a better way)*
 
