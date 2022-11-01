@@ -4,11 +4,10 @@
 //! completed and then provides the nessassary options
 use std::collections::{HashMap, HashSet};
 
-use chumsky::primitive::Container;
 use ropey::RopeSlice;
 use tower_lsp::lsp_types::{CompletionItem, CompletionItemKind};
 
-use crate::rule::{NetworkAddress, NetworkDirection, NetworkPort, Rule, Spanned, AST};
+use crate::rule::{NetworkAddress, NetworkPort, AST};
 
 /// A CSV record, obtained from the suricata cli
 #[derive(Debug, Clone)]

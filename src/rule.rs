@@ -251,7 +251,6 @@ impl NetworkAddress {
                     }
                 };
             }
-            _ => (),
         }
     }
 }
@@ -298,7 +297,7 @@ impl fmt::Display for NetworkPort {
                 let (port, _) = port.as_ref();
                 write!(f, "!{}", port)
             }
-            NetworkPort::PortVar((port_name, span)) => {
+            NetworkPort::PortVar((port_name, _)) => {
                 write!(f, "${}", port_name)
             }
         }
