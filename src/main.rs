@@ -4,7 +4,7 @@
 //! by IWANABETHATGUY.
 //! 
 //! [boilerplate code]: https://github.com/IWANABETHATGUY/tower-lsp-boilerplate
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 use chumsky::{Parser, Span};
 use dashmap::DashMap;
@@ -27,7 +27,7 @@ struct Backend {
     document_map: DashMap<String, Rope>,
     semantic_token_map: DashMap<String, Vec<ImCompleteSemanticToken>>,
     keywords: HashMap<String, Keyword>,
-    variables: (Vec<String>, Vec<String>), // (address vars, port vars)
+    variables: (HashSet<String>, HashSet<String>), // (address vars, port vars)
 }
 
 #[tower_lsp::async_trait]
@@ -42,10 +42,8 @@ impl LanguageServer for Backend {
                 completion_provider: Some(CompletionOptions {
                     resolve_provider: Some(false),
                     trigger_characters: Some(vec![
-                        " ".to_string(),
-                        ":".to_string(),
-                        ";".to_string(),
-                        "\n".to_string(),
+                        "$".to_string(),
+                        "; ".to_string(),
                     ]),
                     work_done_progress_options: Default::default(),
                     all_commit_characters: None,
@@ -570,7 +568,7 @@ async fn main() {
         document_map: DashMap::new(),
         semantic_token_map: DashMap::new(),
         keywords: HashMap::new(),
-        variables: (vec![], vec![]),
+        variables: (HashSet::new(), HashSet::new()),
     })
     .finish();
     Server::new(stdin, stdout, socket).serve(service).await;
