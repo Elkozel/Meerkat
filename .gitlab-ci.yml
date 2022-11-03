@@ -4,8 +4,8 @@
 image: "rust:latest"
 stages:
     - build client
-    - compile server
-    - package
+    - check rust
+    - package & deploy
 
 before_script:
     # install nvm
@@ -23,14 +23,18 @@ build_client:
     script:
         - npx tsc -b
 
-# Use cargo to compile server
-compile_server:
-    stage: compile server
+# Use cargo to check server
+check_rust:
+    stage: check rust
     script:
-        - cargo build --release # because optimized build can be reused in next stage
+        - cargo check
 
 # Use vscode package tool to package the extenssion
-package:
-    stage: package
+# This rule is only active on the main branch
+package&deploy:
+    stage: package & deploy
     script:
         - npx vsce package
+    rules:
+        - if: '$CI_COMMIT_REF_NAME == "master"'
+    
