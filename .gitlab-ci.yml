@@ -8,6 +8,11 @@ stages:
     - package
 
 before_script:
+    # install nvm
+    - "curl -o- https://raw.githubusercontent.com/creationix/nvm/v0.31.3/install.sh | bash"
+    # install npm and node
+    - "nvm install node"
+    # install project
     - "npm install"
 
 # Use npm to build the project
