@@ -21,7 +21,7 @@ before_script:
 build_client:
     stage: build client
     script:
-        - tsc -b
+        - npx tsc -b
 
 # Use cargo to compile server
 compile_server:
