@@ -4,26 +4,37 @@
 image: "rust:latest"
 stages:
     - build client
-    - compile server
-    - package
+    - check rust
+    - package & deploy
 
 before_script:
+    # install nvm
+    - "curl -o- https://raw.githubusercontent.com/creationix/nvm/v0.31.3/install.sh | bash"
+    # source bash
+    - "source ~/.bashrc"
+    # install npm and node
+    - "nvm install node"
+    # install project
     - "npm install"
 
 # Use npm to build the project
 build_client:
     stage: build client
     script:
-        - tsc -b
+        - npx tsc -b
 
-# Use cargo to compile server
-compile_server:
-    stage: compile server
+# Use cargo to check server
+check_rust:
+    stage: check rust
     script:
-        - cargo build --release # because optimized build can be reused in next stage
+        - cargo check
 
 # Use vscode package tool to package the extenssion
-package:
-    stage: package
+# This rule is only active on the main branch
+package&deploy:
+    stage: package & deploy
     script:
         - npx vsce package
+    rules:
+        - if: '$CI_COMMIT_REF_NAME == "master"'
+    
