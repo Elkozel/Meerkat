@@ -7,7 +7,7 @@ Meerkat provides the following features:
 - Signature formatting
 - Hover information
 - Variable references/renaiming
-- Code completion (partially)
+- Code completion
 - Rule performance statistics (TODO)
 - Code snipplets (TOOD)
 - Rule linting (TOOD)
@@ -36,12 +36,27 @@ Package the extenssion:
 ```bash
 npx vsce package
 ```
-*The script will also move the meerkat language server to the local bin folder (I am still looking for a better way)*
+*The script will also move the meerkat language server to the local bin folder*
 
 At the end you should have a file named meerkat.vsix, which can be opened by VSCode
 
 ### Windows
-WIP
+**Make sure you have rust installed!**
+
+Install all dependencies for the project:
+```bash
+npm install
+```
+Package the extenssion:
+```bash
+npx vsce package
+```
+*The script will also install the meerkat language server on the machine*
+
+At the end you should have a file named meerkat.vsix, which can be opened by VSCode
+
+## Updating
+Following the installation steps and opening the .vsix file with VSCode should be enough to update the extenssion.
 
 ## Suricata signatures
 
@@ -95,3 +110,36 @@ If you want to contribute by writing code, the rust docs for the project is a pe
 ```bash
 cargo doc --open
 ```
+
+
+## Installation troubleshooting
+### Unexpected token '?'
+If you get the following error:
+```
+SyntaxError: Unexpected token '?'
+    at wrapSafe (internal/modules/cjs/loader.js:915:16)
+    at Module._compile (internal/modules/cjs/loader.js:963:27)
+```
+The issue is most probably the version of the Node that you're using.
+
+
+### Linker 'cc' not found
+If you get the following error:
+```
+error: linker `cc` not found
+  |
+  = note: No such file or directory (os error 2)
+
+error: could not compile `quote` due to previous error
+```
+Try the following solution:
+```
+sudo apt install build-essential
+```
+
+### Vulnerabilities, while installing with npm
+The issue is most probably related to the version of npm used. Try updating npm:
+```
+npm update
+```
+This command should tell you if you have an older version of npm and give you the line you need to run to update it
