@@ -18,16 +18,22 @@ before_script:
     - "npm install"
 
 # Use npm to build the project
+# This is skipped on the main branch
 build_client:
     stage: build client
     script:
         - npx tsc -b
+    rules:
+        - if: '$CI_COMMIT_REF_NAME != "master"'
 
 # Use cargo to check server
+# This is skipped on the main branch
 check_rust:
     stage: check rust
     script:
         - cargo check
+    rules:
+        - if: '$CI_COMMIT_REF_NAME != "master"'
 
 # Use vscode package tool to package the extenssion
 # This rule is only active on the main branch
