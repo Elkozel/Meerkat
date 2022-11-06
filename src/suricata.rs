@@ -74,7 +74,7 @@ fn get_process_output(rule_file: &str) -> String {
     // Generate absolute path
     let path = Path::new(rule_file)
         .canonicalize()
-        .expect("Could not generate path to file");
+        .expect(format!("Could not generate path to file {}", rule_file).as_str());
     let rules_file = path
         .to_str()
         .expect("Path encoding is not valid for the OS");
@@ -147,7 +147,7 @@ impl LogMessage {
                 DateTime::<FixedOffset>::from_local(datetime, offset)
             });
 
-        let log_level = text::ident().delimited_by(just("<"), just(">")).padded();
+        let log_level = text::ident::<_, Simple<char>>().delimited_by(just("<"), just(">")).padded();
         let dash = just::<_, _, Simple<char>>("-").padded();
 
         timestamp
@@ -157,8 +157,7 @@ impl LogMessage {
             .then(SuricataErrorCode::parser().or_not())
             .then_ignore(dash.or_not())
             .then(take_until(text::newline::<Simple<char>>().or(end::<Simple<char>>())))
-            .map(|(((timestamp, log_level), err_code), msg)| {
-                let (message, _) = msg;
+            .map(|(((timestamp, log_level), err_code), (message, _))| {
                 LogMessage {
                     timestamp,
                     log_level,

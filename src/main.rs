@@ -490,7 +490,7 @@ impl Backend {
                 ast.rules.insert(line_num as u32, rule);
             };
         });
-        let diagnostics = verify_rule(params.uri.as_str());
+        let diagnostics = verify_rule(params.uri.path());
         self.client
             .log_message(MessageType::INFO, format!("{:?}", diagnostics))
             .await;
