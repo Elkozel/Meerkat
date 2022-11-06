@@ -90,7 +90,7 @@ impl NetworkAddress {
                 })
             });
 
-            let any = text::keyword("any").map_with_span(|_, span| (NetworkAddress::Any, span));
+            let any = text::keyword::<_, _, Simple<char>>("any").map_with_span(|_, span: Span| (NetworkAddress::Any, span));
             // Simple IPv4 address
             let ipv4 = digit
                 .separated_by(just("."))
@@ -105,7 +105,7 @@ impl NetworkAddress {
                     )
                 });
             // Simple IPv4 address
-            let ipv6 = one_of("0123456789abcdefABCDEF:")
+            let ipv6 = one_of::<_, _, Simple<char>>("0123456789abcdefABCDEF:")
                 .repeated()
                 .collect::<String>()
                 .try_map(|ipv6, span: Span| {
@@ -139,21 +139,21 @@ impl NetworkAddress {
                 .delimited_by(just("["), just("]"))
                 .map_with_span(|ips, span| (NetworkAddress::IPGroup(ips), span));
 
-            let ip_variable = filter(|c: &char| *c == '$')
+            let ip_variable = just::<_, _, Simple<char>>('$')
                     .ignore_then(text::ident())
                     .map_with_span(|name, span: Range<usize>| {
                         (NetworkAddress::IPVariable((name, span.clone())), span)
                     });
 
             // Negated IP: !192.168.0.1
-            let negated_ip = filter(|c: &char| *c == '!')
+            let negated_ip = just::<_, _, Simple<char>>('!')
                 .ignore_then(
                     ip_variable
                         .or(ip_group.clone())
                         .or(cidr.clone())
                         .or(ip.clone()),
                 )
-                .map_with_span(|ip, span| (NetworkAddress::NegIP(Box::new(ip)), span));
+                .map_with_span(|ip, span: Span| (NetworkAddress::NegIP(Box::new(ip)), span));
 
             ip_variable
                 .or(negated_ip)
@@ -178,7 +178,7 @@ impl NetworkPort {
                     span,
                 ))
             });
-            let any = text::keyword("any").map_with_span(|_, span| (NetworkPort::Any, span));
+            let any = text::keyword::<_, _, Simple<char>>("any").map_with_span(|_, span: Span| (NetworkPort::Any, span));
             // Just a number
             let port_number = number
                 .map(|(port, span)| (NetworkPort::Port(port), span))
@@ -217,21 +217,21 @@ impl NetworkPort {
                 .map_with_span(|ports, span| (NetworkPort::PortGroup(ports), span));
 
             // Variable: $ABC
-            let port_variable = filter(|c| *c == "$")
+            let port_variable = filter(|c: &char| *c == '$')
                     .ignore_then(text::ident())
                     .map_with_span(|name, span: Range<usize>| {
                         (NetworkPort::PortVar((name, span.clone())), span)
                     });
 
             // Negated port: !5
-            let negated_port = just("!")
-                .then(
+            let negated_port = filter(|c: &char| *c == '$')
+                .ignore_then(
                     port_variable
                         .or(port_group.clone())
                         .or(port_range.clone())
                         .or(port_number.clone()),
                 )
-                .map_with_span(|(_, ports), span| (NetworkPort::NegPort(Box::new(ports)), span));
+                .map_with_span(|ports, span: Span| (NetworkPort::NegPort(Box::new(ports)), span));
 
             negated_port
                 .or(port_variable)
@@ -247,10 +247,10 @@ impl NetworkPort {
 impl NetworkDirection {
     /// Provides a parser for a network direction
     fn parser() -> impl Parser<char, (NetworkDirection, Span), Error = Simple<char>> {
-        just("->")
-            .or(just("<>"))
-            .or(just("<-"))
-            .map_with_span(|dir, span| match dir {
+        one_of::<_, _, Simple<char>>("<->")
+        .repeated()
+        .collect::<String>()
+            .map_with_span(|dir, span| match dir.as_ref() {
                 "->" => (NetworkDirection::SrcToDst, span),
                 "<>" => (NetworkDirection::Both, span),
                 "<-" => (NetworkDirection::DstToSrc, span),
@@ -270,10 +270,10 @@ impl RuleOption {
     /// 
     /// [suricata docs]: https://suricata.readthedocs.io/en/suricata-6.0.0/rules/intro.html#rule-options
     fn parser() -> impl Parser<char, (RuleOption, Span), Error = Simple<char>> {
-        let escaped_chars = one_of("\";\\").delimited_by(just("\\"), empty());
+        let escaped_chars = one_of::<_, _, Simple<char>>("\";\\").delimited_by(just("\\"), empty());
         let unescaped_value = escaped_chars
             .clone()
-            .or(none_of(";,"))
+            .or(none_of::<_, _, Simple<char>>(";,"))
             .repeated()
             .collect::<String>()
             .map_with_span(|options, span: Span| {
@@ -281,7 +281,7 @@ impl RuleOption {
             });
 
         let string_value = escaped_chars
-            .or(none_of("\""))
+            .or(none_of::<_, _, Simple<char>>("\""))
             .repeated()
             .delimited_by(just("\""), just("\""))
             .collect::<String>()
@@ -290,7 +290,7 @@ impl RuleOption {
                 (OptionsVariable::String((value, span.clone())), span)
             });
 
-        let keyword = none_of(":;)")
+        let keyword = none_of::<_, _, Simple<char>>(":;)")
             .repeated()
             .collect::<String>()
             .padded()
