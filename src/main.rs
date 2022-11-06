@@ -6,7 +6,7 @@
 //! [boilerplate code]: https://github.com/IWANABETHATGUY/tower-lsp-boilerplate
 use std::collections::{HashMap, HashSet};
 
-use chumsky::{Parser, Span};
+use chumsky::{Parser};
 use dashmap::DashMap;
 use meerkat::completion::{get_completion, Keyword};
 use meerkat::hover::get_hover;
@@ -490,10 +490,10 @@ impl Backend {
                 ast.rules.insert(line_num as u32, rule);
             };
         });
+        let diagnostics = verify_rule(params.uri.as_str());
         self.client
-            .log_message(MessageType::INFO, format!("{:?}", errors))
+            .log_message(MessageType::INFO, format!("{:?}", diagnostics))
             .await;
-        let diagnostics = verify_rule(params.uri.as_str(), rope);
 
         self.client
             .publish_diagnostics(params.uri.clone(), diagnostics, Some(params.version))

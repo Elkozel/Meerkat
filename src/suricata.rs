@@ -10,19 +10,18 @@
 use chrono::{DateTime, FixedOffset, Local, NaiveDate};
 use chumsky::{
     prelude::Simple,
-    primitive::{empty, end, filter, just, take_until},
+    primitive::{empty, end, just, take_until},
     text::{self, TextParser},
     Parser,
 };
-use ropey::Rope;
-use std::{ops::Range, path::Path, process::Command, str};
-use tower_lsp::lsp_types::Diagnostic;
+use std::{path::Path, process::Command, str};
+use tower_lsp::lsp_types::{Diagnostic, Range, Position};
 
 const INVALID_SIGNATURE_ERROR_CODE: u32 = 39;
 const ERROR_TYPE: &str = "Error";
 
 /// Verify a list of rules
-pub fn verify_rule(path: &str, rope: Rope) -> Vec<Diagnostic> {
+pub fn verify_rule(path: &str) -> Vec<Diagnostic> {
     let diagnostics = vec![];
     let log_file = get_process_output(path);
     println!("Log file: {}", &log_file);
@@ -36,7 +35,9 @@ pub fn verify_rule(path: &str, rope: Rope) -> Vec<Diagnostic> {
         .rev() // go in reverese order
         .for_each(|error| {
             || -> Option<_> {
+                // Check if the log has an error code
                 match &error.err_code {
+                    // Check it is the error code, which contains the line and file
                     Some(err_code) if err_code.err_code == INVALID_SIGNATURE_ERROR_CODE => {
                         // Find the location of file name and line in output
                         let from_file_loc = error.message.rfind("from file ")? + "from file ".len();
@@ -54,13 +55,15 @@ pub fn verify_rule(path: &str, rope: Rope) -> Vec<Diagnostic> {
                         println!("curr line: {}, curr file: {}", &curr_line, &curr_file);
                         Some(())
                     }
-                    Some(err_code) => {
-                        let start = rope.try_line_to_char(curr_line);
-                        let end = rope.try_line_to_char(curr_line + 1) - 1;
-                        Diagnostic::new_simple(Range::new(start, end), error.message);
+                    // Else push error to the user
+                    _ => {
+                        let range = Range::new(
+                            Position { line: curr_line, character: 0 }, 
+                            Position { line: curr_line, character: u32::MAX }
+                        );
+                        Diagnostic::new_simple(range, error.message.clone());
                         Some(())
                     }
-                    _ => Some(()),
                 }
             }();
         });
@@ -110,7 +113,7 @@ impl SuricataErrorCode {
         let err_code = text::int(10)
             .delimited_by(just("("), just(")"))
             .map(|s: String| s.parse::<u32>().unwrap());
-        just("ERRCODE:")
+        just::<_, _, Simple<char>>("ERRCODE:")
             .then(err_type.padded())
             .then(err_code.padded())
             .delimited_by(just("["), just("]"))
@@ -124,7 +127,7 @@ impl SuricataErrorCode {
 
 impl LogMessage {
     pub fn parser() -> impl Parser<char, LogMessage, Error = Simple<char>> {
-        let zeroes = filter(|c: &char| *c == '0').ignored().repeated();
+        let zeroes = just::<_, _, Simple<char>>('0').repeated();
         let integer = zeroes
             .or_not()
             .ignore_then(text::digits(10))
@@ -145,14 +148,15 @@ impl LogMessage {
             });
 
         let log_level = text::ident().delimited_by(just("<"), just(">")).padded();
+        let dash = just::<_, _, Simple<char>>("-").padded();
 
         timestamp
-            .then_ignore(just("-").padded())
+            .then_ignore(dash)
             .then(log_level)
-            .then_ignore(just("-").padded())
+            .then_ignore(dash)
             .then(SuricataErrorCode::parser().or_not())
-            .then_ignore(just("-").or_not().padded())
-            .then(take_until(text::newline().or(end())))
+            .then_ignore(dash.or_not())
+            .then(take_until(text::newline::<Simple<char>>().or(end::<Simple<char>>())))
             .map(|(((timestamp, log_level), err_code), msg)| {
                 let (message, _) = msg;
                 LogMessage {
