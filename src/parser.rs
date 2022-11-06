@@ -90,7 +90,7 @@ impl NetworkAddress {
                 })
             });
 
-            let any = just("any").map_with_span(|_, span| (NetworkAddress::Any, span));
+            let any = text::keyword("any").map_with_span(|_, span| (NetworkAddress::Any, span));
             // Simple IPv4 address
             let ipv4 = digit
                 .separated_by(just("."))
@@ -139,22 +139,21 @@ impl NetworkAddress {
                 .delimited_by(just("["), just("]"))
                 .map_with_span(|ips, span| (NetworkAddress::IPGroup(ips), span));
 
-            let ip_variable =
-                just("$")
-                    .then(text::ident())
-                    .map_with_span(|(_, name), span: Range<usize>| {
+            let ip_variable = filter(|c: &char| *c == '$')
+                    .ignore_then(text::ident())
+                    .map_with_span(|name, span: Range<usize>| {
                         (NetworkAddress::IPVariable((name, span.clone())), span)
                     });
 
             // Negated IP: !192.168.0.1
-            let negated_ip = just("!")
-                .then(
+            let negated_ip = filter(|c: &char| *c == '!')
+                .ignore_then(
                     ip_variable
                         .or(ip_group.clone())
                         .or(cidr.clone())
                         .or(ip.clone()),
                 )
-                .map_with_span(|(_, ip), span| (NetworkAddress::NegIP(Box::new(ip)), span));
+                .map_with_span(|ip, span| (NetworkAddress::NegIP(Box::new(ip)), span));
 
             ip_variable
                 .or(negated_ip)
@@ -179,7 +178,7 @@ impl NetworkPort {
                     span,
                 ))
             });
-            let any = just("any").map_with_span(|_, span| (NetworkPort::Any, span));
+            let any = text::keyword("any").map_with_span(|_, span| (NetworkPort::Any, span));
             // Just a number
             let port_number = number
                 .map(|(port, span)| (NetworkPort::Port(port), span))
@@ -218,10 +217,9 @@ impl NetworkPort {
                 .map_with_span(|ports, span| (NetworkPort::PortGroup(ports), span));
 
             // Variable: $ABC
-            let port_variable =
-                just("$")
-                    .then(text::ident())
-                    .map_with_span(|(_, name), span: Range<usize>| {
+            let port_variable = filter(|c| *c == "$")
+                    .ignore_then(text::ident())
+                    .map_with_span(|name, span: Range<usize>| {
                         (NetworkPort::PortVar((name, span.clone())), span)
                     });
 
