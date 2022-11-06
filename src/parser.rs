@@ -217,14 +217,14 @@ impl NetworkPort {
                 .map_with_span(|ports, span| (NetworkPort::PortGroup(ports), span));
 
             // Variable: $ABC
-            let port_variable = filter(|c: &char| *c == '$')
+            let port_variable = just::<_, _, Simple<char>>('$')
                     .ignore_then(text::ident())
                     .map_with_span(|name, span: Range<usize>| {
                         (NetworkPort::PortVar((name, span.clone())), span)
                     });
 
             // Negated port: !5
-            let negated_port = filter(|c: &char| *c == '$')
+            let negated_port = just::<_, _, Simple<char>>('!')
                 .ignore_then(
                     port_variable
                         .or(port_group.clone())
