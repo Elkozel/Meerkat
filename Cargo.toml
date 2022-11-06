@@ -8,6 +8,7 @@ edition = "2021"
 [dependencies]
 csv = "1.1.6"
 chumsky = "0.8.0"
+chrono = "0.4"
 ariadne = "0.1.5"
 env_logger = "0.9.1"
 dashmap = "5.4.0"

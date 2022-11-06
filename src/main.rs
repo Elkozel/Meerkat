@@ -13,6 +13,7 @@ use meerkat::hover::get_hover;
 use meerkat::reference::get_reference;
 use meerkat::rule::{AST, Rule};
 use meerkat::semantic_token::{LEGEND_TYPE, ImCompleteSemanticToken, semantic_token_from_rule};
+use meerkat::suricata::verify_rule;
 use ropey::{Rope, RopeSlice};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
@@ -462,7 +463,6 @@ impl Backend {
             .insert(params.uri.to_string(), rope.clone());
         
         let mut semantic_tokens = vec![];
-        let mut errors = HashMap::new();
         let mut ast = AST{ rules: HashMap::with_capacity(rope.len_lines())};
 
         rope.lines().enumerate().for_each(|(line_num, line)| {
@@ -489,62 +489,11 @@ impl Backend {
 
                 ast.rules.insert(line_num as u32, rule);
             };
-            rule_err.into_iter().for_each(|err| {
-                errors.insert(line_num, err);
-            });
         });
         self.client
             .log_message(MessageType::INFO, format!("{:?}", errors))
             .await;
-        let diagnostics = errors
-            .into_iter()
-            .filter_map(|(line_num, item)| {
-                let (message, span) = match item.reason() {
-                    chumsky::error::SimpleReason::Unclosed { span, delimiter } => {
-                        (format!("Unclosed delimiter {}", delimiter), span.clone())
-                    }
-                    chumsky::error::SimpleReason::Unexpected => (
-                        format!(
-                            "{}, expected {}",
-                            if item.found().is_some() {
-                                "Unexpected token in input"
-                            } else {
-                                "Unexpected end of input"
-                            },
-                            if item.expected().len() == 0 {
-                                "something else".to_string()
-                            } else {
-                                item.expected()
-                                    .map(|expected| match expected {
-                                        Some(expected) => expected.to_string(),
-                                        None => "end of input".to_string(),
-                                    })
-                                    .collect::<Vec<_>>()
-                                    .join(", ")
-                            }
-                        ),
-                        item.span(),
-                    ),
-                    chumsky::error::SimpleReason::Custom(msg) => (msg.to_string(), item.span()),
-                };
-
-                let diagnostic = || -> Option<Diagnostic> {
-                    // let start_line = rope.try_char_to_line(span.start)?;
-                    // let first_char = rope.try_line_to_char(start_line)?;
-                    // let start_column = span.start - first_char;
-                    let start_position = Position { line: line_num as u32, character: span.start() as u32 };
-                    let end_position = Position { line: line_num as u32, character: span.end() as u32 };
-                    // let end_line = rope.try_char_to_line(span.end)?;
-                    // let first_char = rope.try_line_to_char(end_line)?;
-                    // let end_column = span.end - first_char;
-                    Some(Diagnostic::new_simple(
-                        Range::new(start_position, end_position),
-                        message,
-                    ))
-                }();
-                diagnostic
-            })
-            .collect::<Vec<_>>();
+        let diagnostics = verify_rule(params.uri.as_str(), rope);
 
         self.client
             .publish_diagnostics(params.uri.clone(), diagnostics, Some(params.version))
