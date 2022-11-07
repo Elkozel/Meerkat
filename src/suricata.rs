@@ -14,23 +14,31 @@ use chumsky::{
     text::{self, TextParser},
     Parser,
 };
+use ropey::Rope;
+use std::error::Error;
 use std::{path::Path, process::Command, str};
-use tower_lsp::lsp_types::{Diagnostic, Range, Position};
+use tempfile::NamedTempFile;
+use tower_lsp::lsp_types::{Diagnostic, Position, Range};
 
 const INVALID_SIGNATURE_ERROR_CODE: u32 = 39;
 const ERROR_TYPE: &str = "Error";
 
 /// Verify a list of rules
-pub fn verify_rule(path: &str) -> Vec<Diagnostic> {
-    let diagnostics = vec![];
-    let log_file = get_process_output(path);
-    println!("Log file: {}", &log_file);
-    let logs: Vec<LogMessage> = LogMessage::parse_logs().parse(log_file).unwrap();
+pub fn verify_rule(rope: &Rope) -> Result<Vec<Diagnostic>, Box<dyn Error>> {
+    let mut diagnostics = vec![];
+    let tempfile = NamedTempFile::new()?;
+    rope.write_to(&tempfile)?;
+    let log_file = get_process_output(tempfile.path())?;
+    let logs = LogMessage::parse_logs().parse(log_file);
 
     let mut curr_line = 0;
     let mut curr_file = "";
     // Go over each log
-    logs.iter()
+    if logs.is_err() {
+        return Ok(diagnostics);
+    }
+    logs.unwrap()
+        .iter()
         .filter(|log_msg| log_msg.log_level == ERROR_TYPE) // look at only error logs
         .rev() // go in reverese order
         .for_each(|error| {
@@ -58,39 +66,43 @@ pub fn verify_rule(path: &str) -> Vec<Diagnostic> {
                     // Else push error to the user
                     _ => {
                         let range = Range::new(
-                            Position { line: curr_line, character: 0 }, 
-                            Position { line: curr_line, character: u32::MAX }
+                            Position {
+                                line: curr_line,
+                                character: 0,
+                            },
+                            Position {
+                                line: curr_line,
+                                character: u32::MAX,
+                            },
                         );
-                        Diagnostic::new_simple(range, error.message.clone());
+                        diagnostics.push(Diagnostic::new_simple(range, error.message.clone()));
                         Some(())
                     }
                 }
             }();
         });
-    diagnostics
+    Ok(diagnostics)
 }
 
-fn get_process_output(rule_file: &str) -> String {
+/// Gets the output that Suricata produced and returns it as a String
+fn get_process_output(rule_file: &Path) -> Result<String, Box<dyn Error>> {
     // Generate absolute path
-    let path = Path::new(rule_file)
-        .canonicalize()
-        .expect(format!("Could not generate path to file {}", rule_file).as_str());
-    let rules_file = path
-        .to_str()
-        .expect("Path encoding is not valid for the OS");
+    let rules_file = rule_file.canonicalize()?;
 
     // Execute suricata
     // -S loaded exclusively
     // -l log directory (maybe)
     // -r pcap offline mode
     let suricata_process = Command::new("suricata")
-        .args([format!("-S {}", rules_file).as_str(), "--engine-analysis"])
-        .output()
-        .expect("Could not execute suricata");
+        .args([
+            format!("-S {}", rules_file.display()).as_str(),
+            "--engine-analysis",
+        ])
+        .output()?;
 
     // Get the output from the command
-    let log_file = String::from_utf8(suricata_process.stdout).expect("The response was not UTF-8");
-    log_file
+    let log_file = String::from_utf8(suricata_process.stdout)?;
+    Ok(log_file)
 }
 
 #[derive(Clone, Debug)]
@@ -147,7 +159,9 @@ impl LogMessage {
                 DateTime::<FixedOffset>::from_local(datetime, offset)
             });
 
-        let log_level = text::ident::<_, Simple<char>>().delimited_by(just("<"), just(">")).padded();
+        let log_level = text::ident::<_, Simple<char>>()
+            .delimited_by(just("<"), just(">"))
+            .padded();
         let dash = just::<_, _, Simple<char>>("-").padded();
 
         timestamp
@@ -156,15 +170,17 @@ impl LogMessage {
             .then_ignore(dash)
             .then(SuricataErrorCode::parser().or_not())
             .then_ignore(dash.or_not())
-            .then(take_until(text::newline::<Simple<char>>().or(end::<Simple<char>>())))
-            .map(|(((timestamp, log_level), err_code), (message, _))| {
-                LogMessage {
+            .then(take_until(
+                text::newline::<Simple<char>>().or(end::<Simple<char>>()),
+            ))
+            .map(
+                |(((timestamp, log_level), err_code), (message, _))| LogMessage {
                     timestamp,
                     log_level,
                     err_code,
                     message: message.into_iter().collect(),
-                }
-            })
+                },
+            )
     }
     pub fn parse_logs() -> impl Parser<char, Vec<LogMessage>, Error = Simple<char>> {
         LogMessage::parser()

@@ -1,18 +1,18 @@
 //! Provides all functionallity for the language server
-//! 
-//! This code is lightly modified from the [boilerplate code] provided 
+//!
+//! This code is lightly modified from the [boilerplate code] provided
 //! by IWANABETHATGUY.
-//! 
+//!
 //! [boilerplate code]: https://github.com/IWANABETHATGUY/tower-lsp-boilerplate
 use std::collections::{HashMap, HashSet};
 
-use chumsky::{Parser};
+use chumsky::Parser;
 use dashmap::DashMap;
 use meerkat::completion::{get_completion, Keyword};
 use meerkat::hover::get_hover;
 use meerkat::reference::get_reference;
-use meerkat::rule::{AST, Rule};
-use meerkat::semantic_token::{LEGEND_TYPE, ImCompleteSemanticToken, semantic_token_from_rule};
+use meerkat::rule::{Rule, AST};
+use meerkat::semantic_token::{semantic_token_from_rule, ImCompleteSemanticToken, LEGEND_TYPE};
 use meerkat::suricata::verify_rule;
 use ropey::{Rope, RopeSlice};
 use serde::{Deserialize, Serialize};
@@ -45,7 +45,7 @@ impl LanguageServer for Backend {
                     trigger_characters: Some(vec![
                         "$".to_string(),
                         "; ".to_string(),
-                        "(".to_string()
+                        "(".to_string(),
                     ]),
                     work_done_progress_options: Default::default(),
                     all_commit_characters: None,
@@ -442,7 +442,8 @@ impl LanguageServer for Backend {
             let line = rope.get_line(position.line as usize)?;
             let ast = self.ast_map.get(&uri.to_string())?;
             let offset = position.character as usize;
-            let completions = get_completion(&line, &ast, &offset, &self.variables, &self.keywords)?;
+            let completions =
+                get_completion(&line, &ast, &offset, &self.variables, &self.keywords)?;
             Some(completions)
         }();
         Ok(completions.map(CompletionResponse::Array))
@@ -458,17 +459,27 @@ struct TextDocumentItem {
 }
 impl Backend {
     async fn on_change(&self, params: TextDocumentItem) {
+        // Get the rope (text) for the file
         let rope = ropey::Rope::from_str(&params.text);
+        // Run suricata already in the background
+        let diagnostics = verify_rule(&rope).unwrap();
+        // let diagnostics = vec![];
+
         self.document_map
             .insert(params.uri.to_string(), rope.clone());
-        
+        // Create an empty vector for the semantic tokens
         let mut semantic_tokens = vec![];
-        let mut ast = AST{ rules: HashMap::with_capacity(rope.len_lines())};
-
+        // Create an AST for the signatures from the file
+        let mut ast = AST {
+            rules: HashMap::with_capacity(rope.len_lines()),
+        };
+        // Go trough each line and parse the signature
         rope.lines().enumerate().for_each(|(line_num, line)| {
+            // Return if the line is empty
             if line_length_padded(line) <= 1 {
                 return;
             }
+            // If the line starts with a #, treat is as a comment
             if line.to_string().starts_with("#") {
                 let line_offset = rope.line_to_char(line_num);
                 let line_length = line.len_chars();
@@ -482,6 +493,7 @@ impl Backend {
                 });
                 return;
             }
+            // Parse the signature
             let (rule, rule_err) = Rule::parser().parse_recovery(line.to_string());
             if let Some(rule) = rule {
                 let line_offset = rope.line_to_char(line_num);
@@ -490,18 +502,16 @@ impl Backend {
                 ast.rules.insert(line_num as u32, rule);
             };
         });
-        let diagnostics = verify_rule(params.uri.path());
-        self.client
-            .log_message(MessageType::INFO, format!("{:?}", diagnostics))
-            .await;
+        // Store the AST and the semantic tokens in the server
+        self.ast_map.insert(params.uri.to_string(), ast);
+        self.semantic_token_map
+            .insert(params.uri.to_string(), semantic_tokens);
 
+        // Get the diagnostics from Suricata
+        self.client.log_message(MessageType::INFO, format!("Diagnostics: {:?}", diagnostics)).await;
         self.client
             .publish_diagnostics(params.uri.clone(), diagnostics, Some(params.version))
             .await;
-            
-            self.ast_map.insert(params.uri.to_string(), ast);
-        self.semantic_token_map
-            .insert(params.uri.to_string(), semantic_tokens);
     }
 }
 
@@ -528,7 +538,7 @@ fn line_length_padded(line: RopeSlice) -> u32 {
     let mut ret = 0;
     line.chars().for_each(|c| {
         if !c.is_whitespace() {
-            ret+= 1;
+            ret += 1;
         }
     });
     ret
