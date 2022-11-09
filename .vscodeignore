@@ -14,6 +14,5 @@ client/node_modules/**
 !client/node_modules/{minimatch,brace-expansion,concat-map,balanced-match}/**
 !client/node_modules/{semver,lru-cache,yallist}/**
 src
-!target/release/meerkat
 target/**
 Cargo.*
