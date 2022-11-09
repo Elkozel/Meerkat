@@ -480,7 +480,7 @@ impl Backend {
                 return;
             }
             // If the line starts with a #, treat is as a comment
-            if line.to_string().starts_with("#") {
+            if line.to_string().trim().starts_with("#") {
                 let line_offset = rope.line_to_char(line_num);
                 let line_length = line.len_chars();
                 semantic_tokens.push(ImCompleteSemanticToken {

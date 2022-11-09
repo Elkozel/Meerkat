@@ -17,15 +17,16 @@ use chumsky::{
 use ropey::Rope;
 use std::error::Error;
 use std::{path::Path, process::Command};
-use tempfile::NamedTempFile;
+use tempfile::{NamedTempFile, tempdir};
 use tower_lsp::lsp_types::{Diagnostic, DiagnosticSeverity, Position, Range};
 
 /// Verify a list of rules
 pub async fn verify_rule(rope: &Rope) -> Result<Vec<Diagnostic>, Box<dyn Error>> {
-    let tempfile = NamedTempFile::new()?;
+    let temp_dir = tempdir()?;
+    let tempfile = NamedTempFile::new_in(&temp_dir)?;
     rope.write_to(&tempfile)?;
-    let log_file = get_process_output(tempfile.path())?;
-    tempfile.keep()?;
+    let log_file = get_process_output(tempfile.path(), temp_dir.path())?;
+    tempfile.close()?;
     let logs = LogMessage::parse_logs().parse(log_file);
 
     let mut curr_line = 0;
@@ -34,7 +35,8 @@ pub async fn verify_rule(rope: &Rope) -> Result<Vec<Diagnostic>, Box<dyn Error>>
     let diagnostics = match logs {
         Ok(logs) => {
             logs.iter()
-            .filter_map(|error| {
+            .rev()
+            .filter_map(|error| -> Option<Diagnostic> {
                 // Check if the log has an error code
                 match &error.err_code {
                     // Check it is the error code, which contains the line and file
@@ -45,11 +47,8 @@ pub async fn verify_rule(rope: &Rope) -> Result<Vec<Diagnostic>, Box<dyn Error>>
                         // Get current line and file from logs
                         let parsed_line = &error.message[line_loc..];
                         // Check if parse was successfull
-                        match parsed_line.parse::<u32>() {
-                            Ok(line_num) => curr_line = line_num,
-                            Err(_) => {
-                                
-                            },
+                        if let Ok(line_num) = parsed_line.parse::<u32>() {
+                            curr_line = line_num;
                         }
                         // Return none
                         None
@@ -58,11 +57,11 @@ pub async fn verify_rule(rope: &Rope) -> Result<Vec<Diagnostic>, Box<dyn Error>>
                     Some(err_code) => {
                         let range = Range::new(
                             Position {
-                                line: curr_line,
+                                line: curr_line - 1, // Since lines are indexed at 0
                                 character: 0,
                             },
                             Position {
-                                line: curr_line,
+                                line: curr_line - 1, // Since lines are indexed at 0
                                 character: u32::MAX,
                             },
                         );
@@ -87,10 +86,7 @@ pub async fn verify_rule(rope: &Rope) -> Result<Vec<Diagnostic>, Box<dyn Error>>
 }
 
 /// Gets the output that Suricata produced and returns it as a String
-fn get_process_output(rule_file: &Path) -> Result<String, Box<dyn Error>> {
-    // Generate absolute path
-    let rules_file = rule_file.canonicalize()?;
-
+fn get_process_output(rule_file: &Path, log_path: &Path) -> Result<String, Box<dyn Error>> {
     // Execute suricata
     // -S loaded exclusively
     // -l log directory (maybe)
@@ -98,13 +94,17 @@ fn get_process_output(rule_file: &Path) -> Result<String, Box<dyn Error>> {
     let suricata_process = Command::new("suricata")
         .args([
             "-S",
-            rules_file.display().to_string().as_str(),
+            rule_file.display().to_string().as_str(),
+            "-l",
+            log_path.display().to_string().as_str(),
             "--engine-analysis",
         ])
         .output()?;
 
     // Get the output from the command
     let log_file = String::from_utf8(suricata_process.stderr)?;
+    // A hacky method to fix suricata strange output
+    let log_file = log_file.replace("\n\"", "\"");
     Ok(log_file)
 }
 
