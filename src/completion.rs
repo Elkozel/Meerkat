@@ -7,32 +7,7 @@ use std::collections::{HashMap, HashSet};
 use ropey::RopeSlice;
 use tower_lsp::lsp_types::{CompletionItem, CompletionItemKind};
 
-use crate::rule::{NetworkAddress, NetworkPort, AST};
-
-/// A CSV record, obtained from the suricata cli
-#[derive(Debug, Clone)]
-pub struct KeywordRecord {
-    pub name: String,
-    pub description: String,
-    pub app_layer: String,
-    pub features: String,
-    pub documentation: String,
-}
-impl KeywordRecord {
-    pub fn to_keyword(record: &KeywordRecord) -> (String, Keyword) {
-        if record.features.starts_with("No option") {
-            return (record.name.clone(), Keyword::NoOption((*record).clone()));
-        }
-        return (record.name.clone(), Keyword::Other((*record).clone()));
-    }
-}
-
-/// An abstraction layer for the [KeywordRecord] struct
-#[derive(Debug)]
-pub enum Keyword {
-    NoOption(KeywordRecord),
-    Other(KeywordRecord),
-}
+use crate::{rule::{NetworkAddress, NetworkPort, AST}, suricata::Keyword};
 
 /// Fetches the completion options for the signature
 pub fn get_completion(

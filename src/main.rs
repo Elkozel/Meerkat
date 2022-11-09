@@ -8,12 +8,12 @@ use std::collections::{HashMap, HashSet};
 
 use chumsky::Parser;
 use dashmap::DashMap;
-use meerkat::completion::{get_completion, Keyword};
+use meerkat::completion::{get_completion};
 use meerkat::hover::get_hover;
 use meerkat::reference::get_reference;
 use meerkat::rule::{Rule, AST};
 use meerkat::semantic_token::{semantic_token_from_rule, ImCompleteSemanticToken, LEGEND_TYPE};
-use meerkat::suricata::verify_rule;
+use meerkat::suricata::{verify_rule, Keyword, get_keywords};
 use ropey::{Rope, RopeSlice};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
@@ -509,7 +509,6 @@ impl Backend {
 
         // Get the diagnostics from Suricata
         let d = diagnostics.await.unwrap();
-        self.client.log_message(MessageType::INFO, format!("Diagnostics: {:?}", d)).await;
         self.client
             .publish_diagnostics(params.uri.clone(), d, Some(params.version))
             .await;
@@ -522,13 +521,21 @@ async fn main() {
 
     let stdin = tokio::io::stdin();
     let stdout = tokio::io::stdout();
+    let keywords = match get_keywords() {
+        Ok(keywords) => {
+            keywords
+        },
+        Err(_) => {
+            HashMap::new()
+        },
+    };
 
     let (service, socket) = LspService::build(|client| Backend {
         client,
         ast_map: DashMap::new(),
         document_map: DashMap::new(),
         semantic_token_map: DashMap::new(),
-        keywords: HashMap::new(),
+        keywords: keywords,
         variables: (HashSet::new(), HashSet::new()),
     })
     .finish();

@@ -14,10 +14,12 @@ use chumsky::{
     text::{self, TextParser},
     Parser,
 };
+use csv::ReaderBuilder;
 use ropey::Rope;
-use std::error::Error;
+use serde::Deserialize;
+use std::{collections::HashMap, error::Error};
 use std::{path::Path, process::Command};
-use tempfile::{NamedTempFile, tempdir};
+use tempfile::{tempdir, NamedTempFile};
 use tower_lsp::lsp_types::{Diagnostic, DiagnosticSeverity, Position, Range};
 
 /// Verify a list of rules
@@ -35,52 +37,56 @@ pub async fn verify_rule(rope: &Rope) -> Result<Vec<Diagnostic>, Box<dyn Error>>
     let diagnostics = match logs {
         Ok(logs) => {
             logs.iter()
-            .rev()
-            .filter_map(|error| -> Option<Diagnostic> {
-                // Check if the log has an error code
-                match &error.err_code {
-                    // Check it is the error code, which contains the line and file
-                    Some(err_code) if error.message.contains("at line ") && error.message.contains("from file ") => {
-                        // Find the location of file name and line in output
-                        let line_loc = error.message.rfind("at line ")? + "at line ".len();
-    
-                        // Get current line and file from logs
-                        let parsed_line = &error.message[line_loc..];
-                        // Check if parse was successfull
-                        if let Ok(line_num) = parsed_line.parse::<u32>() {
-                            curr_line = line_num;
+                .rev()
+                .filter_map(|error| -> Option<Diagnostic> {
+                    // Check if the log has an error code
+                    match &error.err_code {
+                        // Check it is the error code, which contains the line and file
+                        Some(err_code)
+                            if error.message.contains("at line ")
+                                && error.message.contains("from file ") =>
+                        {
+                            // Find the location of file name and line in output
+                            let line_loc = error.message.rfind("at line ")? + "at line ".len();
+
+                            // Get current line and file from logs
+                            let parsed_line = &error.message[line_loc..];
+                            // Check if parse was successfull
+                            if let Ok(line_num) = parsed_line.parse::<u32>() {
+                                curr_line = line_num;
+                            }
+                            // Return none
+                            None
                         }
-                        // Return none
-                        None
+                        // Else push error to the user
+                        Some(err_code) => {
+                            let range = Range::new(
+                                Position {
+                                    line: curr_line - 1, // Since lines are indexed at 0
+                                    character: 0,
+                                },
+                                Position {
+                                    line: curr_line - 1, // Since lines are indexed at 0
+                                    character: u32::MAX,
+                                },
+                            );
+                            let source = String::from("Suricata");
+                            Some(Diagnostic::new_with_code_number(
+                                range,
+                                DiagnosticSeverity::ERROR,
+                                err_code.err_code as i32,
+                                Some(source),
+                                error.message.clone(),
+                            ))
+                        }
+                        _ => None,
                     }
-                    // Else push error to the user
-                    Some(err_code) => {
-                        let range = Range::new(
-                            Position {
-                                line: curr_line - 1, // Since lines are indexed at 0
-                                character: 0,
-                            },
-                            Position {
-                                line: curr_line - 1, // Since lines are indexed at 0
-                                character: u32::MAX,
-                            },
-                        );
-                        let source = String::from("Suricata");
-                        Some(Diagnostic::new_with_code_number(
-                            range,
-                            DiagnosticSeverity::ERROR,
-                            err_code.err_code as i32,
-                            Some(source),
-                            error.message.clone(),
-                        ))
-                    }
-                    _ => None
-                }
-            }).collect::<Vec<Diagnostic>>()
-        },
+                })
+                .collect::<Vec<Diagnostic>>()
+        }
         Err(_) => {
             vec![]
-        },
+        }
     };
     Ok(diagnostics)
 }
@@ -106,6 +112,66 @@ fn get_process_output(rule_file: &Path, log_path: &Path) -> Result<String, Box<d
     // A hacky method to fix suricata strange output
     let log_file = log_file.replace("\n\"", "\"");
     Ok(log_file)
+}
+
+/// A CSV record, obtained from the suricata cli
+#[derive(Debug, Clone, Deserialize)]
+pub struct KeywordRecord {
+    pub name: String,
+    pub description: String,
+    pub app_layer: String,
+    pub features: String,
+    pub documentation: String,
+}
+impl KeywordRecord {
+    /// Convert a Keywords record into a Keyword (adding an abstraction layer)
+    pub fn to_keyword(record: KeywordRecord) -> (String, Keyword) {
+        if record.features.starts_with("No option") {
+            return (record.name.clone(), Keyword::NoOption(record));
+        }
+        return (record.name.clone(), Keyword::Other(record));
+    }
+}
+
+/// An abstraction layer for the [KeywordRecord] struct
+#[derive(Debug)]
+pub enum Keyword {
+    NoOption(KeywordRecord),
+    Other(KeywordRecord),
+}
+
+pub fn get_keywords() -> Result<HashMap<String, Keyword>, Box<dyn Error>> {
+    let mut ret = HashMap::new();
+    // Execute suricata
+    // -r pcap offline mode
+    let keywords_command = Command::new("suricata")
+        .arg("--list-keywords=csv")
+        .output()?;
+
+    // Get the output from the command
+    let mut log_file = String::from_utf8(keywords_command.stdout)?;
+    // Skip all the log files
+    let csv_start = log_file.find("name;description;app layer;features;documentation");
+    if let Some(csv_start) = csv_start {
+        log_file = (&log_file[csv_start..]).to_string();
+    }
+    // Hacky solution to suricata adding ; after every record
+    log_file = log_file.replace("documentation", "documentation;");
+    // Hacky solution to suricata using non-standard header names
+    log_file = log_file.replace("app layer", "app_layer");
+
+    // Get all CSV records
+    let mut reader = ReaderBuilder::new()
+        .delimiter(b';')
+        .from_reader(log_file.as_bytes());
+    for record in reader.deserialize() {
+        // Ignore errors
+        if let Ok(keyword_record) = record {
+            let (name, keyword) = KeywordRecord::to_keyword(keyword_record);
+            ret.insert(name, keyword);
+        }
+    }
+    Ok(ret)
 }
 
 #[derive(Clone, Debug)]
