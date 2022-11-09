@@ -1,18 +1,19 @@
 //! Provides all functionallity for the language server
-//! 
-//! This code is lightly modified from the [boilerplate code] provided 
+//!
+//! This code is lightly modified from the [boilerplate code] provided
 //! by IWANABETHATGUY.
-//! 
+//!
 //! [boilerplate code]: https://github.com/IWANABETHATGUY/tower-lsp-boilerplate
 use std::collections::{HashMap, HashSet};
 
-use chumsky::{Parser, Span};
+use chumsky::Parser;
 use dashmap::DashMap;
-use meerkat::completion::{get_completion, Keyword};
+use meerkat::completion::{get_completion};
 use meerkat::hover::get_hover;
 use meerkat::reference::get_reference;
-use meerkat::rule::{AST, Rule};
-use meerkat::semantic_token::{LEGEND_TYPE, ImCompleteSemanticToken, semantic_token_from_rule};
+use meerkat::rule::{Rule, AST};
+use meerkat::semantic_token::{semantic_token_from_rule, ImCompleteSemanticToken, LEGEND_TYPE};
+use meerkat::suricata::{verify_rule, Keyword, get_keywords};
 use ropey::{Rope, RopeSlice};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
@@ -43,18 +44,12 @@ impl LanguageServer for Backend {
                     resolve_provider: Some(false),
                     trigger_characters: Some(vec![
                         "$".to_string(),
-                        "; ".to_string(),
-                        "(".to_string()
+                        " ".to_string(),
+                        "(".to_string(),
                     ]),
                     work_done_progress_options: Default::default(),
                     all_commit_characters: None,
                 }),
-                execute_command_provider: Some(ExecuteCommandOptions {
-                    // TODO
-                    commands: vec!["dummy.do_something".to_string()],
-                    work_done_progress_options: Default::default(),
-                }),
-
                 workspace: Some(WorkspaceServerCapabilities {
                     workspace_folders: Some(WorkspaceFoldersServerCapabilities {
                         supported: Some(true),
@@ -441,7 +436,8 @@ impl LanguageServer for Backend {
             let line = rope.get_line(position.line as usize)?;
             let ast = self.ast_map.get(&uri.to_string())?;
             let offset = position.character as usize;
-            let completions = get_completion(&line, &ast, &offset, &self.variables, &self.keywords)?;
+            let completions =
+                get_completion(&line, &ast, &offset, &self.variables, &self.keywords)?;
             Some(completions)
         }();
         Ok(completions.map(CompletionResponse::Array))
@@ -457,19 +453,28 @@ struct TextDocumentItem {
 }
 impl Backend {
     async fn on_change(&self, params: TextDocumentItem) {
+        // Get the rope (text) for the file
         let rope = ropey::Rope::from_str(&params.text);
+        // Run suricata already in the background
+        let suricata_process = verify_rule(&rope);
+        // let diagnostics = vec![];
+
         self.document_map
             .insert(params.uri.to_string(), rope.clone());
-        
+        // Create an empty vector for the semantic tokens
         let mut semantic_tokens = vec![];
-        let mut errors = HashMap::new();
-        let mut ast = AST{ rules: HashMap::with_capacity(rope.len_lines())};
-
+        // Create an AST for the signatures from the file
+        let mut ast = AST {
+            rules: HashMap::with_capacity(rope.len_lines()),
+        };
+        // Go trough each line and parse the signature
         rope.lines().enumerate().for_each(|(line_num, line)| {
+            // Return if the line is empty
             if line_length_padded(line) <= 1 {
                 return;
             }
-            if line.to_string().starts_with("#") {
+            // If the line starts with a #, treat is as a comment
+            if line.to_string().trim().starts_with("#") {
                 let line_offset = rope.line_to_char(line_num);
                 let line_length = line.len_chars();
                 semantic_tokens.push(ImCompleteSemanticToken {
@@ -482,77 +487,32 @@ impl Backend {
                 });
                 return;
             }
-            let (rule, rule_err) = Rule::parser().parse_recovery(line.to_string());
+            // Parse the signature
+            let (rule, _) = Rule::parser().parse_recovery(line.to_string());
             if let Some(rule) = rule {
                 let line_offset = rope.line_to_char(line_num);
                 semantic_token_from_rule(&rule, &line_offset, &mut semantic_tokens);
 
                 ast.rules.insert(line_num as u32, rule);
             };
-            rule_err.into_iter().for_each(|err| {
-                errors.insert(line_num, err);
-            });
         });
-        self.client
-            .log_message(MessageType::INFO, format!("{:?}", errors))
-            .await;
-        let diagnostics = errors
-            .into_iter()
-            .filter_map(|(line_num, item)| {
-                let (message, span) = match item.reason() {
-                    chumsky::error::SimpleReason::Unclosed { span, delimiter } => {
-                        (format!("Unclosed delimiter {}", delimiter), span.clone())
-                    }
-                    chumsky::error::SimpleReason::Unexpected => (
-                        format!(
-                            "{}, expected {}",
-                            if item.found().is_some() {
-                                "Unexpected token in input"
-                            } else {
-                                "Unexpected end of input"
-                            },
-                            if item.expected().len() == 0 {
-                                "something else".to_string()
-                            } else {
-                                item.expected()
-                                    .map(|expected| match expected {
-                                        Some(expected) => expected.to_string(),
-                                        None => "end of input".to_string(),
-                                    })
-                                    .collect::<Vec<_>>()
-                                    .join(", ")
-                            }
-                        ),
-                        item.span(),
-                    ),
-                    chumsky::error::SimpleReason::Custom(msg) => (msg.to_string(), item.span()),
-                };
+        // Store the AST and the semantic tokens in the server
+        self.ast_map.insert(params.uri.to_string(), ast);
+        self.semantic_token_map
+            .insert(params.uri.to_string(), semantic_tokens);
 
-                let diagnostic = || -> Option<Diagnostic> {
-                    // let start_line = rope.try_char_to_line(span.start)?;
-                    // let first_char = rope.try_line_to_char(start_line)?;
-                    // let start_column = span.start - first_char;
-                    let start_position = Position { line: line_num as u32, character: span.start() as u32 };
-                    let end_position = Position { line: line_num as u32, character: span.end() as u32 };
-                    // let end_line = rope.try_char_to_line(span.end)?;
-                    // let first_char = rope.try_line_to_char(end_line)?;
-                    // let end_column = span.end - first_char;
-                    Some(Diagnostic::new_simple(
-                        Range::new(start_position, end_position),
-                        message,
-                    ))
-                }();
-                diagnostic
-            })
-            .collect::<Vec<_>>();
-
+        // Get the diagnostics from Suricata
+        let diagnostics = match suricata_process.await {
+            Ok(diagnostics) => {
+                diagnostics
+            },
+            Err(_) => {
+                vec![]
+            },
+        };
         self.client
             .publish_diagnostics(params.uri.clone(), diagnostics, Some(params.version))
             .await;
-            
-            self.ast_map.insert(params.uri.to_string(), ast);
-        self.semantic_token_map
-            .insert(params.uri.to_string(), semantic_tokens);
     }
 }
 
@@ -562,13 +522,21 @@ async fn main() {
 
     let stdin = tokio::io::stdin();
     let stdout = tokio::io::stdout();
+    let keywords = match get_keywords() {
+        Ok(keywords) => {
+            keywords
+        },
+        Err(_) => {
+            HashMap::new()
+        },
+    };
 
     let (service, socket) = LspService::build(|client| Backend {
         client,
         ast_map: DashMap::new(),
         document_map: DashMap::new(),
         semantic_token_map: DashMap::new(),
-        keywords: HashMap::new(),
+        keywords: keywords,
         variables: (HashSet::new(), HashSet::new()),
     })
     .finish();
@@ -579,7 +547,7 @@ fn line_length_padded(line: RopeSlice) -> u32 {
     let mut ret = 0;
     line.chars().for_each(|c| {
         if !c.is_whitespace() {
-            ret+= 1;
+            ret += 1;
         }
     });
     ret

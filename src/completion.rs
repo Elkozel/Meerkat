@@ -7,32 +7,7 @@ use std::collections::{HashMap, HashSet};
 use ropey::RopeSlice;
 use tower_lsp::lsp_types::{CompletionItem, CompletionItemKind};
 
-use crate::rule::{NetworkAddress, NetworkPort, AST};
-
-/// A CSV record, obtained from the suricata cli
-#[derive(Debug, Clone)]
-pub struct KeywordRecord {
-    pub name: String,
-    pub description: String,
-    pub app_layer: String,
-    pub features: String,
-    pub documentation: String,
-}
-impl KeywordRecord {
-    pub fn to_keyword(record: &KeywordRecord) -> (String, Keyword) {
-        if record.features.starts_with("No option") {
-            return (record.name.clone(), Keyword::NoOption((*record).clone()));
-        }
-        return (record.name.clone(), Keyword::Other((*record).clone()));
-    }
-}
-
-/// An abstraction layer for the [KeywordRecord] struct
-#[derive(Debug)]
-pub enum Keyword {
-    NoOption(KeywordRecord),
-    Other(KeywordRecord),
-}
+use crate::{rule::{NetworkAddress, NetworkPort, AST}, suricata::Keyword};
 
 /// Fetches the completion options for the signature
 pub fn get_completion(
@@ -53,8 +28,10 @@ pub fn get_completion(
         get_completion_for_address(&address_variables, &mut completion_tokens);
         get_completion_for_port(&port_variables, &mut completion_tokens);
     }
-    else {
+    else if line.get_char(offset - 2)? == ';' || line.get_char(offset - 1)? == '(' {
         get_completion_for_option_keywords(keywords, &mut completion_tokens);
+    }
+    else {
     }
     Some(completion_tokens)
 }
@@ -138,13 +115,13 @@ pub fn get_completion_for_option_keywords(
         Keyword::NoOption(record) => completion_tokens.push(CompletionItem {
             label: record.name.clone(),
             insert_text: Some(format!("{}; ", record.name)),
-            kind: Some(CompletionItemKind::KEYWORD),
+            kind: Some(CompletionItemKind::CONSTANT),
             detail: Some(record.description.clone()),
             ..Default::default()
         }),
         Keyword::Other(record) => completion_tokens.push(CompletionItem {
             label: record.name.clone(),
-            insert_text: Some(record.name.clone()),
+            insert_text: Some(format!("{}: ", record.name.clone())),
             kind: Some(CompletionItemKind::KEYWORD),
             detail: Some(record.description.clone()),
             ..Default::default()

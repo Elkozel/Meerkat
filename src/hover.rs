@@ -1,5 +1,5 @@
 //! Provides the hover logic for the language server
-//! 
+//!
 //! The hover logic provides additional information:
 //! - IP start and end on IP ranges
 //! - Description and Documentation for keywords
@@ -8,10 +8,7 @@ use std::collections::HashMap;
 use ipnet::IpNet;
 use tower_lsp::lsp_types::{HoverContents, MarkupContent};
 
-use crate::{
-    completion::Keyword,
-    rule::{Header, NetworkAddress, RuleOption, Span, Spanned, AST},
-};
+use crate::{rule::{Header, NetworkAddress, RuleOption, Span, Spanned, AST}, suricata::Keyword};
 
 /// Provides hover information
 pub fn get_hover(
@@ -33,8 +30,7 @@ fn hover_for_header(header: &Spanned<Header>, col: &usize) -> Option<Spanned<Hov
         hover_for_address(&header.source, col)
     } else if header.destination.1.contains(col) {
         hover_for_address(&header.destination, col)
-    }
-    else {
+    } else {
         None
     }
 }
@@ -55,7 +51,11 @@ fn hover_for_address(
                 Ok(range) => Some((
                     HoverContents::Markup(MarkupContent {
                         kind: tower_lsp::lsp_types::MarkupKind::Markdown,
-                        value: format!("**{}** - **{}**", range.network(), range.broadcast()),
+                        value: [
+                            format!("**{}**", range),
+                            format!("{} - {}", range.network(), range.broadcast()),
+                        ]
+                        .join("\n\n")
                     }),
                     span.clone(),
                 )),
@@ -105,13 +105,11 @@ fn get_contents_for_keyword(
         HoverContents::Markup(MarkupContent {
             kind: tower_lsp::lsp_types::MarkupKind::Markdown,
             value: [
-                format!("#{}", keyword.name),
-                "## Description".to_string(),
-                keyword.description.clone(),
-                "## Documentation".to_string(),
-                keyword.documentation.clone(),
+                format!("**{}**", keyword.name),
+                format!("{}", keyword.description.clone()),
+                format!("*Documentation: {}*", keyword.documentation.clone()),
             ]
-            .join("\n"),
+            .join("\n\n"),
         }),
         span.clone(),
     ))

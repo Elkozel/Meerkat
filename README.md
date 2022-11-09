@@ -3,7 +3,8 @@
 Suricata/Snort formatter extension for VS Code
 
 Meerkat provides the following features:
-- Syntax highlighting via semantic tokens
+- Signature checking with suricata
+- Syntax highlighting
 - Signature formatting
 - Hover information
 - Variable references/renaiming
@@ -36,7 +37,7 @@ Package the extenssion:
 ```bash
 npx vsce package
 ```
-*The script will also move the meerkat language server to the local bin folder*
+*The script will also install the meerkat language server for you*
 
 At the end you should have a file named meerkat.vsix, which can be opened by VSCode
 
@@ -51,7 +52,7 @@ Package the extenssion:
 ```bash
 npx vsce package
 ```
-*The script will also install the meerkat language server on the machine*
+*The script will also install the meerkat language server for you*
 
 At the end you should have a file named meerkat.vsix, which can be opened by VSCode
 
