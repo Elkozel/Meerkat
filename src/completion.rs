@@ -28,8 +28,10 @@ pub fn get_completion(
         get_completion_for_address(&address_variables, &mut completion_tokens);
         get_completion_for_port(&port_variables, &mut completion_tokens);
     }
-    else {
+    else if line.get_char(offset - 2)? == ';' || line.get_char(offset - 1)? == '(' {
         get_completion_for_option_keywords(keywords, &mut completion_tokens);
+    }
+    else {
     }
     Some(completion_tokens)
 }
@@ -49,29 +51,29 @@ pub fn get_completion_for_address(
     completion_tokens: &mut Vec<CompletionItem>,
 ) {
     // // Push regular IPs
-    // let regular_ips = vec![
-    //     (
-    //         "192.168.0.0/16".to_string(),
-    //         "RFC 1918 16-bit block".to_string(),
-    //     ),
-    //     (
-    //         "172.16.0.0./12".to_string(),
-    //         "RFC 1918 20-bit block".to_string(),
-    //     ),
-    //     (
-    //         "10.0.0.0/8".to_string(),
-    //         "RFC 1918 24-bit block".to_string(),
-    //     ),
-    // ];
-    // regular_ips.iter().for_each(|(ip, details)| {
-    //     completion_tokens.push(CompletionItem {
-    //         label: ip.clone(),
-    //         insert_text: Some(ip.clone()),
-    //         kind: Some(CompletionItemKind::VARIABLE),
-    //         detail: Some(details.clone()),
-    //         ..Default::default()
-    //     })
-    // });
+    let regular_ips = vec![
+        (
+            "192.168.0.0/16".to_string(),
+            "RFC 1918 16-bit block".to_string(),
+        ),
+        (
+            "172.16.0.0./12".to_string(),
+            "RFC 1918 20-bit block".to_string(),
+        ),
+        (
+            "10.0.0.0/8".to_string(),
+            "RFC 1918 24-bit block".to_string(),
+        ),
+    ];
+    regular_ips.iter().for_each(|(ip, details)| {
+        completion_tokens.push(CompletionItem {
+            label: ip.clone(),
+            insert_text: Some(ip.clone()),
+            kind: Some(CompletionItemKind::VARIABLE),
+            detail: Some(details.clone()),
+            ..Default::default()
+        })
+    });
     // Push variables
     variables.iter().for_each(|var| {
         completion_tokens.push(CompletionItem {
@@ -113,13 +115,13 @@ pub fn get_completion_for_option_keywords(
         Keyword::NoOption(record) => completion_tokens.push(CompletionItem {
             label: record.name.clone(),
             insert_text: Some(format!("{}; ", record.name)),
-            kind: Some(CompletionItemKind::KEYWORD),
+            kind: Some(CompletionItemKind::CONSTANT),
             detail: Some(record.description.clone()),
             ..Default::default()
         }),
         Keyword::Other(record) => completion_tokens.push(CompletionItem {
             label: record.name.clone(),
-            insert_text: Some(record.name.clone()),
+            insert_text: Some(format!("{}: ", record.name.clone())),
             kind: Some(CompletionItemKind::KEYWORD),
             detail: Some(record.description.clone()),
             ..Default::default()
