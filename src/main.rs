@@ -462,7 +462,7 @@ impl Backend {
         // Get the rope (text) for the file
         let rope = ropey::Rope::from_str(&params.text);
         // Run suricata already in the background
-        let diagnostics = verify_rule(&rope).unwrap();
+        let diagnostics = verify_rule(&rope);
         // let diagnostics = vec![];
 
         self.document_map
@@ -494,7 +494,7 @@ impl Backend {
                 return;
             }
             // Parse the signature
-            let (rule, rule_err) = Rule::parser().parse_recovery(line.to_string());
+            let (rule, _) = Rule::parser().parse_recovery(line.to_string());
             if let Some(rule) = rule {
                 let line_offset = rope.line_to_char(line_num);
                 semantic_token_from_rule(&rule, &line_offset, &mut semantic_tokens);
@@ -508,9 +508,10 @@ impl Backend {
             .insert(params.uri.to_string(), semantic_tokens);
 
         // Get the diagnostics from Suricata
-        self.client.log_message(MessageType::INFO, format!("Diagnostics: {:?}", diagnostics)).await;
+        let d = diagnostics.await.unwrap();
+        self.client.log_message(MessageType::INFO, format!("Diagnostics: {:?}", d)).await;
         self.client
-            .publish_diagnostics(params.uri.clone(), diagnostics, Some(params.version))
+            .publish_diagnostics(params.uri.clone(), d, Some(params.version))
             .await;
     }
 }

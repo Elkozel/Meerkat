@@ -16,55 +16,46 @@ use chumsky::{
 };
 use ropey::Rope;
 use std::error::Error;
-use std::{path::Path, process::Command, str};
+use std::{path::Path, process::Command};
 use tempfile::NamedTempFile;
-use tower_lsp::lsp_types::{Diagnostic, Position, Range};
-
-const INVALID_SIGNATURE_ERROR_CODE: u32 = 39;
-const ERROR_TYPE: &str = "Error";
+use tower_lsp::lsp_types::{Diagnostic, DiagnosticSeverity, Position, Range};
 
 /// Verify a list of rules
-pub fn verify_rule(rope: &Rope) -> Result<Vec<Diagnostic>, Box<dyn Error>> {
-    let mut diagnostics = vec![];
+pub async fn verify_rule(rope: &Rope) -> Result<Vec<Diagnostic>, Box<dyn Error>> {
     let tempfile = NamedTempFile::new()?;
     rope.write_to(&tempfile)?;
     let log_file = get_process_output(tempfile.path())?;
+    tempfile.keep()?;
     let logs = LogMessage::parse_logs().parse(log_file);
 
     let mut curr_line = 0;
-    let mut curr_file = "";
+
     // Go over each log
-    if logs.is_err() {
-        return Ok(diagnostics);
-    }
-    logs.unwrap()
-        .iter()
-        .filter(|log_msg| log_msg.log_level == ERROR_TYPE) // look at only error logs
-        .rev() // go in reverese order
-        .for_each(|error| {
-            || -> Option<_> {
+    let diagnostics = match logs {
+        Ok(logs) => {
+            logs.iter()
+            .filter_map(|error| {
                 // Check if the log has an error code
                 match &error.err_code {
                     // Check it is the error code, which contains the line and file
-                    Some(err_code) if err_code.err_code == INVALID_SIGNATURE_ERROR_CODE => {
+                    Some(err_code) if error.message.contains("at line ") && error.message.contains("from file ") => {
                         // Find the location of file name and line in output
-                        let from_file_loc = error.message.rfind("from file ")? + "from file ".len();
                         let line_loc = error.message.rfind("at line ")? + "at line ".len();
-
+    
                         // Get current line and file from logs
-                        curr_file = &error.message[from_file_loc..line_loc - "at line ".len()];
                         let parsed_line = &error.message[line_loc..];
                         // Check if parse was successfull
                         match parsed_line.parse::<u32>() {
                             Ok(line_num) => curr_line = line_num,
-                            Err(_) => (),
+                            Err(_) => {
+                                
+                            },
                         }
-
-                        println!("curr line: {}, curr file: {}", &curr_line, &curr_file);
-                        Some(())
+                        // Return none
+                        None
                     }
                     // Else push error to the user
-                    _ => {
+                    Some(err_code) => {
                         let range = Range::new(
                             Position {
                                 line: curr_line,
@@ -75,12 +66,23 @@ pub fn verify_rule(rope: &Rope) -> Result<Vec<Diagnostic>, Box<dyn Error>> {
                                 character: u32::MAX,
                             },
                         );
-                        diagnostics.push(Diagnostic::new_simple(range, error.message.clone()));
-                        Some(())
+                        let source = String::from("Suricata");
+                        Some(Diagnostic::new_with_code_number(
+                            range,
+                            DiagnosticSeverity::ERROR,
+                            err_code.err_code as i32,
+                            Some(source),
+                            error.message.clone(),
+                        ))
                     }
+                    _ => None
                 }
-            }();
-        });
+            }).collect::<Vec<Diagnostic>>()
+        },
+        Err(_) => {
+            vec![]
+        },
+    };
     Ok(diagnostics)
 }
 
@@ -95,13 +97,14 @@ fn get_process_output(rule_file: &Path) -> Result<String, Box<dyn Error>> {
     // -r pcap offline mode
     let suricata_process = Command::new("suricata")
         .args([
-            format!("-S {}", rules_file.display()).as_str(),
+            "-S",
+            rules_file.display().to_string().as_str(),
             "--engine-analysis",
         ])
         .output()?;
 
     // Get the output from the command
-    let log_file = String::from_utf8(suricata_process.stdout)?;
+    let log_file = String::from_utf8(suricata_process.stderr)?;
     Ok(log_file)
 }
 
