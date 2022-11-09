@@ -51,29 +51,29 @@ pub fn get_completion_for_address(
     completion_tokens: &mut Vec<CompletionItem>,
 ) {
     // // Push regular IPs
-    let regular_ips = vec![
-        (
-            "192.168.0.0/16".to_string(),
-            "RFC 1918 16-bit block".to_string(),
-        ),
-        (
-            "172.16.0.0./12".to_string(),
-            "RFC 1918 20-bit block".to_string(),
-        ),
-        (
-            "10.0.0.0/8".to_string(),
-            "RFC 1918 24-bit block".to_string(),
-        ),
-    ];
-    regular_ips.iter().for_each(|(ip, details)| {
-        completion_tokens.push(CompletionItem {
-            label: ip.clone(),
-            insert_text: Some(ip.clone()),
-            kind: Some(CompletionItemKind::VARIABLE),
-            detail: Some(details.clone()),
-            ..Default::default()
-        })
-    });
+    // let regular_ips = vec![
+    //     (
+    //         "192.168.0.0/16".to_string(),
+    //         "RFC 1918 16-bit block".to_string(),
+    //     ),
+    //     (
+    //         "172.16.0.0./12".to_string(),
+    //         "RFC 1918 20-bit block".to_string(),
+    //     ),
+    //     (
+    //         "10.0.0.0/8".to_string(),
+    //         "RFC 1918 24-bit block".to_string(),
+    //     ),
+    // ];
+    // regular_ips.iter().for_each(|(ip, details)| {
+    //     completion_tokens.push(CompletionItem {
+    //         label: ip.clone(),
+    //         insert_text: Some(ip.clone()),
+    //         kind: Some(CompletionItemKind::VARIABLE),
+    //         detail: Some(details.clone()),
+    //         ..Default::default()
+    //     })
+    // });
     // Push variables
     variables.iter().for_each(|var| {
         completion_tokens.push(CompletionItem {
