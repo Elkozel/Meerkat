@@ -17,7 +17,7 @@ import {
 let client: LanguageClient;
 
 export function activate(context: ExtensionContext) {
-	let hello = commands.registerCommand("meerkat.hello", async () => {
+	const hello = commands.registerCommand("meerkat.hello", async () => {
 		window.showInformationMessage("Meerkat is here!");
 	});
   
@@ -43,7 +43,7 @@ export function activate(context: ExtensionContext) {
 	// If the extension is launched in debug mode then the debug server options are used
 	// Otherwise the run options are used
 	// Options to control the language client
-	let clientOptions: LanguageClientOptions = {
+	const clientOptions: LanguageClientOptions = {
 		// Register the server for plain text documents
 		documentSelector: [{ scheme: "file", language: "suricata" }],
 		synchronize: {
