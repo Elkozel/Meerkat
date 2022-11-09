@@ -51,7 +51,11 @@ fn hover_for_address(
                 Ok(range) => Some((
                     HoverContents::Markup(MarkupContent {
                         kind: tower_lsp::lsp_types::MarkupKind::Markdown,
-                        value: format!("**{}** - **{}**", range.network(), range.broadcast()),
+                        value: [
+                            format!("**{}**", range),
+                            format!("{} - {}", range.network(), range.broadcast()),
+                        ]
+                        .join("\n\n")
                     }),
                     span.clone(),
                 )),
@@ -101,11 +105,11 @@ fn get_contents_for_keyword(
         HoverContents::Markup(MarkupContent {
             kind: tower_lsp::lsp_types::MarkupKind::Markdown,
             value: [
-                format!("**{}**\n\n", keyword.name),
-                format!("{}\n\n", keyword.description.clone()),
+                format!("**{}**", keyword.name),
+                format!("{}", keyword.description.clone()),
                 format!("*Documentation: {}*", keyword.documentation.clone()),
             ]
-            .join("\n"),
+            .join("\n\n"),
         }),
         span.clone(),
     ))
