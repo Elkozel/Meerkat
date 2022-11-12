@@ -36,23 +36,24 @@ pub struct AST {
 /// Represents a single signature(or rule)
 #[derive(Debug, Hash, Clone)]
 pub struct Rule {
-    pub action: Spanned<String>,
+    pub action: Option<Spanned<String>>,
     pub header: Spanned<Header>,
-    pub options: Vec<Spanned<RuleOption>>,
+    pub options: Option<Vec<Spanned<RuleOption>>>,
 }
+
 /// Print formatted rule
 impl fmt::Display for Rule {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
-            f,
-            "{} {} ({})",
-            self.action.0,
-            self.header.0,
-            self.options
-                .iter()
-                .map(|(option, _)| option.to_string())
-                .collect::<Vec<String>>()
-                .join("; ")
+            f, ""
+            // "{} {} ({})",
+            // self.action.0,
+            // self.header.0,
+            // self.options
+            //     .iter()
+            //     .filter_map(|option| option.to_string())
+            //     .collect::<Vec<String>>()
+            //     .join("; ")
         )
     }
 }
@@ -68,56 +69,60 @@ impl PartialEq for Rule {
 impl Eq for Rule {}
 impl Rule {
     /// Get the source network address from the header
-    pub fn source(&self) -> &Spanned<NetworkAddress> {
+    pub fn source(&self) -> &Option<Spanned<NetworkAddress>> {
         let (header, _) = &self.header;
         &header.source
     }
     /// Get the source network port from the header
-    pub fn source_port(&self) -> &Spanned<NetworkPort> {
+    pub fn source_port(&self) -> &Option<Spanned<NetworkPort>> {
         let (header, _) = &self.header;
         &header.source_port
     }
     /// Get the destination network address from the header
-    pub fn destination(&self) -> &Spanned<NetworkAddress> {
+    pub fn destination(&self) -> &Option<Spanned<NetworkAddress>> {
         let (header, _) = &self.header;
         &header.destination
     }
     /// Get the destination network port from the header
-    pub fn destination_port(&self) -> &Spanned<NetworkPort> {
+    pub fn destination_port(&self) -> &Option<Spanned<NetworkPort>> {
         let (header, _) = &self.header;
         &header.destination_port
     }
     /// Get all network address from the header
     pub fn addresses(&self) -> Vec<&Spanned<NetworkAddress>> {
-        vec![self.source(), self.destination()]
+        self.source().iter()
+            .chain(self.destination().iter())
+            .collect()
     }
     /// Get all network ports from the header
     pub fn ports(&self) -> Vec<&Spanned<NetworkPort>> {
-        vec![self.source_port(), self.destination_port()]
+        self.source_port().iter()
+            .chain(self.destination_port().iter())
+            .collect()
     }
 }
 
 /// Represents a signature header
 #[derive(Debug, Hash, Clone)]
 pub struct Header {
-    pub protocol: Spanned<String>,
-    pub source: Spanned<NetworkAddress>,
-    pub source_port: Spanned<NetworkPort>,
-    pub direction: Spanned<NetworkDirection>,
-    pub destination: Spanned<NetworkAddress>,
-    pub destination_port: Spanned<NetworkPort>,
+    pub protocol: Option<Spanned<String>>,
+    pub source: Option<Spanned<NetworkAddress>>,
+    pub source_port: Option<Spanned<NetworkPort>>,
+    pub direction: Option<Spanned<NetworkDirection>>,
+    pub destination: Option<Spanned<NetworkAddress>>,
+    pub destination_port: Option<Spanned<NetworkPort>>,
 }
 impl fmt::Display for Header {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
-            f,
-            "{} {} {} {} {} {}",
-            self.protocol.0,
-            self.source.0,
-            self.source_port.0,
-            self.direction.0,
-            self.destination.0,
-            self.destination_port.0
+            f, ""
+            // "{} {} {} {} {} {}",
+            // self.protocol.0,
+            // self.source.0,
+            // self.source_port.0,
+            // self.direction.0,
+            // self.destination.0,
+            // self.destination_port.0
         )
     }
 }
@@ -140,22 +145,16 @@ impl Header {
         name: &Option<String>,
         variables: &mut Vec<Spanned<String>>,
     ) {
-        // Unwrap the source network address
-        let (source, _) = &self.source;
-        source.find_variables_with_array(name, variables);
-
-        // Unwrap the dedstination network address
-        let (destination, _) = &self.destination;
-        destination.find_variables_with_array(name, variables);
+        // Iterate over source and destination addresses
+        self.source.iter().chain(self.destination.iter()).for_each(|(address, span)| {
+            address.find_variables_with_array(name, variables)
+        });
     }
     pub fn find_port_variables(&self, name: &Option<String>, variables: &mut Vec<Spanned<String>>) {
-        // Unwrap the source network port
-        let (source_port, _) = &self.source_port;
-        source_port.find_variables_with_array(name, variables);
-
-        // Unwrap the dedstination network port
-        let (destination_port, _) = &self.destination_port;
-        destination_port.find_variables_with_array(name, variables);
+        // Iterate over source and destination ports
+        self.source_port.iter().chain(self.destination_port.iter()).for_each(|(address, span)| {
+            address.find_variables_with_array(name, variables)
+        });
     }
 }
 

@@ -17,8 +17,9 @@ use chumsky::{
 use csv::ReaderBuilder;
 use ropey::Rope;
 use serde::Deserialize;
+use tokio::process::Command;
 use std::{collections::HashMap, error::Error};
-use std::{path::Path, process::Command};
+use std::{path::Path};
 use tempfile::{tempdir, NamedTempFile};
 use tower_lsp::lsp_types::{Diagnostic, DiagnosticSeverity, Position, Range};
 
@@ -27,7 +28,7 @@ pub async fn verify_rule(rope: &Rope) -> Result<Vec<Diagnostic>, Box<dyn Error>>
     let temp_dir = tempdir()?;
     let tempfile = NamedTempFile::new_in(&temp_dir)?;
     rope.write_to(&tempfile)?;
-    let log_file = get_process_output(tempfile.path(), temp_dir.path())?;
+    let log_file = get_process_output(tempfile.path(), temp_dir.path()).await?;
     tempfile.close()?;
     let logs = LogMessage::parse_logs().parse(log_file);
 
@@ -92,7 +93,7 @@ pub async fn verify_rule(rope: &Rope) -> Result<Vec<Diagnostic>, Box<dyn Error>>
 }
 
 /// Gets the output that Suricata produced and returns it as a String
-fn get_process_output(rule_file: &Path, log_path: &Path) -> Result<String, Box<dyn Error>> {
+async fn get_process_output(rule_file: &Path, log_path: &Path) -> Result<String, Box<dyn Error>> {
     // Execute suricata
     // -S loaded exclusively
     // -l log directory (maybe)
@@ -105,7 +106,7 @@ fn get_process_output(rule_file: &Path, log_path: &Path) -> Result<String, Box<d
             log_path.display().to_string().as_str(),
             "--engine-analysis",
         ])
-        .output()?;
+        .output().await?;
 
     // Get the output from the command
     let log_file = String::from_utf8(suricata_process.stderr)?;
@@ -140,13 +141,13 @@ pub enum Keyword {
     Other(KeywordRecord),
 }
 
-pub fn get_keywords() -> Result<HashMap<String, Keyword>, Box<dyn Error>> {
+pub async fn get_keywords() -> Result<HashMap<String, Keyword>, Box<dyn Error>> {
     let mut ret = HashMap::new();
     // Execute suricata
     // -r pcap offline mode
     let keywords_command = Command::new("suricata")
         .arg("--list-keywords=csv")
-        .output()?;
+        .output().await?;
 
     // Get the output from the command
     let mut log_file = String::from_utf8(keywords_command.stdout)?;

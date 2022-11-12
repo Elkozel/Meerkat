@@ -13,7 +13,7 @@ use meerkat::hover::get_hover;
 use meerkat::reference::get_reference;
 use meerkat::rule::{Rule, AST};
 use meerkat::semantic_token::{semantic_token_from_rule, ImCompleteSemanticToken, LEGEND_TYPE};
-use meerkat::suricata::{verify_rule, Keyword, get_keywords};
+use meerkat::suricata::{verify_rule, Keyword, get_keywords, self};
 use ropey::{Rope, RopeSlice};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
@@ -456,7 +456,21 @@ impl Backend {
         // Get the rope (text) for the file
         let rope = ropey::Rope::from_str(&params.text);
         // Run suricata already in the background
-        let suricata_process = verify_rule(&rope);
+        let suricata_process = async {
+            // Get the diagnostics from Suricata
+            let diagnostics = match verify_rule(&rope).await {
+                Ok(diagnostics) => {
+                    diagnostics
+                },
+                Err(_) => {
+                    vec![]
+                },
+            };
+            // Publish the diagnostics
+            self.client
+                .publish_diagnostics(params.uri.clone(), diagnostics, Some(params.version))
+                .await;
+        };
         // let diagnostics = vec![];
 
         self.document_map
@@ -500,19 +514,7 @@ impl Backend {
         self.ast_map.insert(params.uri.to_string(), ast);
         self.semantic_token_map
             .insert(params.uri.to_string(), semantic_tokens);
-
-        // Get the diagnostics from Suricata
-        let diagnostics = match suricata_process.await {
-            Ok(diagnostics) => {
-                diagnostics
-            },
-            Err(_) => {
-                vec![]
-            },
-        };
-        self.client
-            .publish_diagnostics(params.uri.clone(), diagnostics, Some(params.version))
-            .await;
+        suricata_process.await;
     }
 }
 
@@ -522,7 +524,7 @@ async fn main() {
 
     let stdin = tokio::io::stdin();
     let stdout = tokio::io::stdout();
-    let keywords = match get_keywords() {
+    let keywords = match get_keywords().await {
         Ok(keywords) => {
             keywords
         },

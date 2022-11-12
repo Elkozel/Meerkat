@@ -46,31 +46,34 @@ pub fn semantic_token_from_rule(
 ) {
     let (rule, _) = rule;
     // Push the action token
-    let action = &rule.action;
-    semantic_tokens.push(ImCompleteSemanticToken {
-        start: action.1.start + col,
-        length: action.1.len(),
-        token_type: LEGEND_TYPE
-            .iter()
-            .position(|item| item == &SemanticTokenType::FUNCTION)
-            .unwrap(),
-    });
+    for (_, span) in rule.action.iter() {
+        semantic_tokens.push(ImCompleteSemanticToken {
+            start: span.start + col,
+            length: span.len(),
+            token_type: LEGEND_TYPE
+                .iter()
+                .position(|item| item == &SemanticTokenType::FUNCTION)
+                .unwrap(),
+        });
 
-    // Push the header tokens
-    let header = &rule.header.0;
+    }
+    
     // handle network addresses
-    semantic_token_from_address(&header.source, col, &mut semantic_tokens);
-    semantic_token_from_address(&header.destination, col, &mut semantic_tokens);
+    for address in rule.addresses() {
+        semantic_token_from_address(address, col, semantic_tokens);
+    }
 
     // handle network ports
-    semantic_token_from_port(&header.source_port, col, &mut semantic_tokens);
-    semantic_token_from_port(&header.destination_port, col, &mut semantic_tokens);
+    for port in rule.ports() {
+        semantic_token_from_port(port, col, &mut semantic_tokens);
+    }
 
     // Push the options tokens
-    let options = &rule.options;
-    options
-        .iter()
-        .for_each(|option| semantic_token_from_options(option, col, &mut semantic_tokens));
+    for options in rule.options.iter() {
+        options.iter().for_each(|option| {
+            semantic_token_from_options(option, col, &mut semantic_tokens)
+        });
+    }
 }
 
 /// Generate semantic tokens from a network address
