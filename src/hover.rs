@@ -8,7 +8,10 @@ use std::collections::HashMap;
 use ipnet::IpNet;
 use tower_lsp::lsp_types::{HoverContents, MarkupContent};
 
-use crate::{rule::{Header, NetworkAddress, RuleOption, Span, Spanned, AST}, suricata::Keyword};
+use crate::{
+    rule::{Header, NetworkAddress, RuleOption, Span, Spanned, AST},
+    suricata::Keyword,
+};
 
 /// Provides hover information
 pub fn get_hover(
@@ -19,20 +22,14 @@ pub fn get_hover(
 ) -> Option<Spanned<HoverContents>> {
     let (rule, _) = ast.rules.get(line)?;
     // check header
-    hover_for_header(&rule.header, col).or(hover_for_options(&rule.options, col, keywords))
-}
+    let header_check = rule
+        .addresses()
+        .into_iter()
+        .find(|(_, span)| span.contains(col))
+        .map(|address| hover_for_address(address, col));
 
-/// Provides a hover information for a header
-fn hover_for_header(header: &Spanned<Header>, col: &usize) -> Option<Spanned<HoverContents>> {
-    let (header, _) = header;
-
-    if header.source.1.contains(col) {
-        hover_for_address(&header.source, col)
-    } else if header.destination.1.contains(col) {
-        hover_for_address(&header.destination, col)
-    } else {
-        None
-    }
+    //else check options
+    hover_for_options(&rule.options, col, keywords).or(header_check?)
 }
 
 /// Provides hover information about a network address.
@@ -55,7 +52,7 @@ fn hover_for_address(
                             format!("**{}**", range),
                             format!("{} - {}", range.network(), range.broadcast()),
                         ]
-                        .join("\n\n")
+                        .join("\n\n"),
                     }),
                     span.clone(),
                 )),
@@ -73,11 +70,12 @@ fn hover_for_address(
 
 /// Provides hover information for options of the rule
 fn hover_for_options(
-    options: &Vec<Spanned<RuleOption>>,
+    options: &Option<Vec<Spanned<RuleOption>>>,
     col: &usize,
     keywords: &HashMap<String, Keyword>,
 ) -> Option<Spanned<HoverContents>> {
-    let (option, _) = options
+    let binding = options.to_owned()?;
+    let (option, _) = binding
         .iter()
         .find(|(_, option_span)| option_span.contains(col))?;
     match option {

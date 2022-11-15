@@ -1,8 +1,8 @@
 //! Provides the parsing for the signatures
-//! 
+//!
 //! Powered by [chumsky], this parser guarantees an extremely fast and reliable
 //! signature parsing.
-//! 
+//!
 //! [chumsky]: https://docs.rs/chumsky/latest/chumsky/
 use chumsky::prelude::*;
 use std::net::Ipv4Addr;
@@ -25,9 +25,9 @@ impl Rule {
             .delimited_by(just("("), just(")"))
             .padded();
 
-        action
+        action.or_not()
             .then(Header::parser().padded())
-            .then(options)
+            .then(options.or_not())
             .then_ignore(end())
             .map_with_span(|((action, header), options), span| {
                 (
@@ -47,16 +47,18 @@ impl Header {
     fn parser() -> impl Parser<char, (Header, Span), Error = Simple<char>> {
         let protocol = text::ident().map_with_span(|protocol, span| (protocol, span));
         let address_port_combined = NetworkAddress::parser()
+            .or_not()
             .padded()
-            .then(NetworkPort::parser().padded());
+            .then(NetworkPort::parser().or_not().padded());
 
-        let address_port_combined2 = NetworkAddress::parser() // I was too lasy cloning it TODO
+        let address_port_combined2 = NetworkAddress::parser()
+            .or_not() // I was too lasy cloning it TODO
             .padded()
-            .then(NetworkPort::parser().padded());
+            .then(NetworkPort::parser().or_not().padded());
 
-        protocol
+        protocol.or_not()
             .then(address_port_combined)
-            .then(NetworkDirection::parser().padded())
+            .then(NetworkDirection::parser().or_not().padded())
             .then(address_port_combined2)
             .map_with_span(|(((protocol, source), direction), destination), span| {
                 (
@@ -90,7 +92,8 @@ impl NetworkAddress {
                 })
             });
 
-            let any = text::keyword::<_, _, Simple<char>>("any").map_with_span(|_, span: Span| (NetworkAddress::Any, span));
+            let any = text::keyword::<_, _, Simple<char>>("any")
+                .map_with_span(|_, span: Span| (NetworkAddress::Any, span));
             // Simple IPv4 address
             let ipv4 = digit
                 .separated_by(just("."))
@@ -140,10 +143,10 @@ impl NetworkAddress {
                 .map_with_span(|ips, span| (NetworkAddress::IPGroup(ips), span));
 
             let ip_variable = just::<_, _, Simple<char>>('$')
-                    .ignore_then(text::ident())
-                    .map_with_span(|name, span: Range<usize>| {
-                        (NetworkAddress::IPVariable((name, span.clone())), span)
-                    });
+                .ignore_then(text::ident())
+                .map_with_span(|name, span: Range<usize>| {
+                    (NetworkAddress::IPVariable((name, span.clone())), span)
+                });
 
             // Negated IP: !192.168.0.1
             let negated_ip = just::<_, _, Simple<char>>('!')
@@ -178,7 +181,8 @@ impl NetworkPort {
                     span,
                 ))
             });
-            let any = text::keyword::<_, _, Simple<char>>("any").map_with_span(|_, span: Span| (NetworkPort::Any, span));
+            let any = text::keyword::<_, _, Simple<char>>("any")
+                .map_with_span(|_, span: Span| (NetworkPort::Any, span));
             // Just a number
             let port_number = number
                 .map(|(port, span)| (NetworkPort::Port(port), span))
@@ -218,10 +222,10 @@ impl NetworkPort {
 
             // Variable: $ABC
             let port_variable = just::<_, _, Simple<char>>('$')
-                    .ignore_then(text::ident())
-                    .map_with_span(|name, span: Range<usize>| {
-                        (NetworkPort::PortVar((name, span.clone())), span)
-                    });
+                .ignore_then(text::ident())
+                .map_with_span(|name, span: Range<usize>| {
+                    (NetworkPort::PortVar((name, span.clone())), span)
+                });
 
             // Negated port: !5
             let negated_port = just::<_, _, Simple<char>>('!')
@@ -248,8 +252,8 @@ impl NetworkDirection {
     /// Provides a parser for a network direction
     fn parser() -> impl Parser<char, (NetworkDirection, Span), Error = Simple<char>> {
         one_of::<_, _, Simple<char>>("<->")
-        .repeated()
-        .collect::<String>()
+            .repeated()
+            .collect::<String>()
             .map_with_span(|dir, span| match dir.as_ref() {
                 "->" => (NetworkDirection::SrcToDst, span),
                 "<>" => (NetworkDirection::Both, span),
@@ -261,13 +265,13 @@ impl NetworkDirection {
 
 impl RuleOption {
     /// Provides a parser for an option inside the signature
-    /// 
+    ///
     /// Signature options are divided into two categories:
     /// - Buffers (http.uri;)
     /// - Keyword pairs (msg: ...;)
-    /// 
+    ///
     /// For more information, please see the [suricata docs]
-    /// 
+    ///
     /// [suricata docs]: https://suricata.readthedocs.io/en/suricata-6.0.0/rules/intro.html#rule-options
     fn parser() -> impl Parser<char, (RuleOption, Span), Error = Simple<char>> {
         let escaped_chars = one_of::<_, _, Simple<char>>("\";\\").delimited_by(just("\\"), empty());
