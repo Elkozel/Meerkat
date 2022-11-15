@@ -23,6 +23,7 @@ export function activate(context: ExtensionContext) {
 		window.showInformationMessage("Meerkat is here!");
 	});
 
+	const temporaryDirectory = fs.mkdtempSync(path.join(os.tmpdir(), "meerkat"));
 	const executeSuricata = commands.registerCommand("meerkat.executeSuricata", (uri: Uri) => {
 		// Return if no active file was found
 		if (window.activeTextEditor === undefined) {
@@ -34,30 +35,38 @@ export function activate(context: ExtensionContext) {
 			window.showErrorMessage("No pcap file was, please select a pcap file");
 			return;
 		}
+		// Check if the file is actually a rules file
+		const rulesFile = window.activeTextEditor.document.uri.fsPath;
+		if (!rulesFile.trim().endsWith("rule") && !rulesFile.trim().endsWith("rules")) {
+			window.showWarningMessage("The file which is active does not have the rules extension!");
+		}
 
-		const temporaryDirectory = fs.mkdtempSync(path.join(os.tmpdir(), "meerkat"));
-
-		// removeFastLogs(temporaryDirectory);
+		// Remove previous logs
+		removeFastLogs(temporaryDirectory);
 		const terminalName = "Run suricata";
-		const terminal = window.createTerminal(terminalName, "suricata", [
+		// Create and run the teminal
+		window.createTerminal(terminalName, "suricata", [
 			"-S", window.activeTextEditor.document.uri.fsPath,
 			"-r", uri.fsPath,
 			"-l", temporaryDirectory
 		]);
 
+		// Open log file after terminal closes
 		window.onDidCloseTerminal(async t => {
 			if (t.name === terminalName) {
 				// Get configuration
 				const workbenchConfig = workspace.getConfiguration("meerkat");
 				const ignoreSuricata = workbenchConfig.get("ignoreSuricataErrors");
-				if (t.exitStatus.code === 1) {
+				if (t.exitStatus.code === 0) {
 					const fastLog = Uri.parse(path.join(temporaryDirectory, "fast.log"));
+					// check if the window is already open
 					window.showTextDocument(fastLog, {
 						"preserveFocus": true,
-						"viewColumn": ViewColumn.Beside
+						"viewColumn": ViewColumn.Beside,
+						"preview": true,
 					});
 				}
-				else if(!ignoreSuricata) {
+				else if (!ignoreSuricata) {
 					// Prompt the user
 					const response = await window.showErrorMessage(`The suricata process exited with code: ${t.exitStatus.reason}(${t.exitStatus.code})`
 						, ...["Open suricata logs", "Ignore", "Do not show again"]);
@@ -75,7 +84,7 @@ export function activate(context: ExtensionContext) {
 						const undo = await window.showInformationMessage("Setting has been adjusted!", "undo");
 						if (undo) {
 							workbenchConfig.update("ignoreSuricataErrors", true);
-							const undo = await window.showInformationMessage("Change has been undone!");
+							window.showInformationMessage("Change has been undone!");
 						}
 					}
 				}
@@ -132,8 +141,10 @@ export function deactivate(): Thenable<void> | undefined {
 function removeFastLogs(folderPath: string) {
 	const fastLog = path.join(folderPath, "fast.log");
 	const fastLogOld = path.join(folderPath, "fast.log.old");
-	// Copy the file to old file (for usefullness)
-	// fs.copyFileSync(fastLog, fastLogOld);
-	// Remove logs file
-	fs.unlinkSync(fastLog);
+	if (fs.existsSync(fastLog)) {
+		// Copy the file to old file (for usefullness)
+		fs.copyFileSync(fastLog, fastLogOld);
+		// Remove logs file
+		fs.truncateSync(fastLog, 0);
+	}
 }
