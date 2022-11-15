@@ -16,21 +16,40 @@
 	},
 	"activationEvents": [
 		"onLanguage:suricata",
-		"onCommand:meerkat.hello"
+		"onCommand:meerkat.hello",
+		"onCommand:meerkat.executeSuricata"
 	],
 	"main": "./client/out/extension",
 	"contributes": {
 		"configuration": {
 			"title": "Meerkat",
-			"properties": {}
+			"properties": {
+				"meerkat.ignoreSuricataErrors": {
+					"type": "boolean",
+					"default": false,
+					"description": "Do not display error messages when suricata exits with an error code"
+				}
+			}
 		},
 		"commands": [
 			{
 				"title": "Say \"hello\" to Meerkat",
 				"command": "meerkat.hello",
 				"shortTitle": "Meerkat: Hello world!"
+			},
+			{
+				"title": "Execute Suricata on a PCAP file",
+				"command": "meerkat.executeSuricata"
 			}
 		],
+		"menus": {
+			"explorer/context": [
+				{
+					"command": "meerkat.executeSuricata",
+					"group": "1_modification"
+				}
+			]
+		},
 		"languages": [
 			{
 				"id": "suricata",
