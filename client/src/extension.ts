@@ -4,7 +4,7 @@
  * ------------------------------------------------------------------------------------------ */
 
 import * as path from 'path';
-import { workspace, ExtensionContext, window, commands, Uri, ViewColumn } from 'vscode';
+import { workspace, ExtensionContext, window, commands, Uri, ViewColumn, TextDocument, TextEditor } from 'vscode';
 import * as os from "node:os";
 import * as fs from "node:fs";
 
@@ -58,13 +58,14 @@ export function activate(context: ExtensionContext) {
 				const workbenchConfig = workspace.getConfiguration("meerkat");
 				const ignoreSuricata = workbenchConfig.get("ignoreSuricataErrors");
 				if (t.exitStatus.code === 0) {
-					const fastLog = Uri.parse(path.join(temporaryDirectory, "fast.log"));
-					// check if the window is already open
-					window.showTextDocument(fastLog, {
+					// Open fast log
+					const fastLogUri = Uri.parse(path.join(temporaryDirectory, "fast.log"));
+					const opennedWindow = await window.showTextDocument(fastLogUri, {
 						"preserveFocus": true,
 						"viewColumn": ViewColumn.Beside,
 						"preview": true,
 					});
+					console.log(searchForTextDocument(opennedWindow.document));
 				}
 				else if (!ignoreSuricata) {
 					// Prompt the user
@@ -146,4 +147,10 @@ function removeFastLogs(folderPath: string) {
 		// Remove logs file
 		fs.truncateSync(fastLog, 0);
 	}
+}
+
+function searchForTextDocument(find: TextDocument) {
+	return window.visibleTextEditors.findIndex(editor => {
+		editor.document.fileName == find.fileName;
+	}) == -1;
 }
