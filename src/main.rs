@@ -13,7 +13,7 @@ use meerkat::hover::get_hover;
 use meerkat::reference::get_reference;
 use meerkat::rule::{Rule, AST};
 use meerkat::semantic_token::{semantic_token_from_rule, ImCompleteSemanticToken, LEGEND_TYPE};
-use meerkat::suricata::{verify_rule, Keyword, get_keywords, self};
+use meerkat::suricata::{verify_rule, Keyword, get_keywords};
 use ropey::{Rope, RopeSlice};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
