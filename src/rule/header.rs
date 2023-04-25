@@ -1,6 +1,6 @@
 use ipnet::IpNet;
 use std::collections::HashMap;
-use std::{collections::HashSet, fmt, net::IpAddr};
+use std::{fmt, net::IpAddr};
 use tower_lsp::lsp_types::HoverContents;
 use tower_lsp::lsp_types::MarkupContent;
 use tower_lsp::lsp_types::SemanticTokenType;
@@ -61,14 +61,14 @@ impl Header {
         self.source
             .iter()
             .chain(self.destination.iter())
-            .for_each(|(address, span)| address.find_variables_with_array(name, variables));
+            .for_each(|(address, _)| address.find_variables_with_array(name, variables));
     }
     pub fn find_port_variables(&self, name: &Option<String>, variables: &mut Vec<Spanned<String>>) {
         // Iterate over source and destination ports
         self.source_port
             .iter()
             .chain(self.destination_port.iter())
-            .for_each(|(address, span)| address.find_variables_with_array(name, variables));
+            .for_each(|(address, _)| address.find_variables_with_array(name, variables));
     }
 }
 impl Semantics for Header {
@@ -118,35 +118,35 @@ impl Hover for Header {
     fn get_hover(
         &self,
         col: &usize,
-        keywords: &HashMap<String, Keyword>
+        keywords: &HashMap<String, Keyword>,
     ) -> Option<Spanned<tower_lsp::lsp_types::HoverContents>> {
         // Check if col is inside the source address
         if let Some((source, span)) = &self.source {
-            if (span.contains(col)) {
+            if span.contains(col) {
                 return source.get_hover(col, keywords);
             }
         }
         // Check if col is inside the source port
         if let Some((source_port, span)) = &self.source_port {
-            if (span.contains(col)) {
+            if span.contains(col) {
                 return source_port.get_hover(col, keywords);
             }
         }
         // Check if col is inside the direction
         if let Some((direction, span)) = &self.direction {
-            if (span.contains(col)) {
+            if span.contains(col) {
                 return direction.get_hover(col, keywords);
             }
         }
         // Check if col is inside the destination address
         if let Some((destination, span)) = &self.destination {
-            if (span.contains(col)) {
+            if span.contains(col) {
                 return destination.get_hover(col, keywords);
             }
         }
         // Check if col is inside the destination port
         if let Some((destination_port, span)) = &self.destination_port {
-            if (span.contains(col)) {
+            if span.contains(col) {
                 return destination_port.get_hover(col, keywords);
             }
         }
@@ -307,7 +307,11 @@ impl Semantics for NetworkAddress {
     }
 }
 impl Hover for NetworkAddress {
-    fn get_hover(&self, col: &usize, keywords: &HashMap<String, Keyword>) -> Option<Spanned<tower_lsp::lsp_types::HoverContents>> {
+    fn get_hover(
+        &self,
+        col: &usize,
+        keywords: &HashMap<String, Keyword>,
+    ) -> Option<Spanned<tower_lsp::lsp_types::HoverContents>> {
         match self {
             NetworkAddress::Any(_) => None,
             NetworkAddress::IPAddr(_) => None,
@@ -332,11 +336,11 @@ impl Hover for NetworkAddress {
                 }
             }
             NetworkAddress::IPGroup(group) => {
-                let (ip, span) = group.iter().find(|(_, span)| span.contains(col))?;
+                let (ip, _) = group.iter().find(|(_, span)| span.contains(col))?;
                 ip.get_hover(col, keywords)
             }
             NetworkAddress::NegIP(ip) => {
-                let (ip, span) = ip.as_ref();
+                let (ip, _) = ip.as_ref();
                 ip.get_hover(col, keywords)
             }
             NetworkAddress::IPVariable(_) => None,
@@ -556,7 +560,11 @@ impl fmt::Display for NetworkDirection {
 }
 
 impl Hover for NetworkDirection {
-    fn get_hover(&self, col: &usize, keywords: &HashMap<String, Keyword>) -> Option<Spanned<tower_lsp::lsp_types::HoverContents>> {
+    fn get_hover(
+        &self,
+        col: &usize,
+        keywords: &HashMap<String, Keyword>,
+    ) -> Option<Spanned<tower_lsp::lsp_types::HoverContents>> {
         None
     }
 }

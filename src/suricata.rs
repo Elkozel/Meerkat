@@ -43,7 +43,7 @@ pub async fn verify_rule(rope: &Rope) -> Result<Vec<Diagnostic>, Box<dyn Error>>
                     // Check if the log has an error code
                     match &error.err_code {
                         // Check it is the error code, which contains the line and file
-                        Some(err_code)
+                        Some(_)
                             if error.message.contains("at line ")
                                 && error.message.contains("from file ") =>
                         {

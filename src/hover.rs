@@ -5,13 +5,11 @@
 //! - Description and Documentation for keywords
 use std::collections::HashMap;
 
-
-use ipnet::IpNet;
 use crate::rule::Hover;
-use tower_lsp::lsp_types::{HoverContents, MarkupContent};
+use tower_lsp::lsp_types::HoverContents;
 
 use crate::{
-    rule::{Span, Spanned, AST, header::NetworkAddress, options::RuleOption},
+    rule::{Spanned, AST},
     suricata::Keyword,
 };
 

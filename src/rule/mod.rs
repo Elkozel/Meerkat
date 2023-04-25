@@ -154,8 +154,8 @@ impl Hover for Rule {
         keywords: &HashMap<String, Keyword>,
     ) -> Option<Spanned<HoverContents>> {
         // Check if hover is in the action
-        let hoverAction = || {
-            if let Some((action, action_span)) = &self.action {
+        let hover_action = || {
+            if let Some((_, _)) = &self.action {
                 None
             } else {
                 None
@@ -169,18 +169,18 @@ impl Hover for Rule {
         };
 
         // Check if the hover is in the options
-        let hoverOptions = || {
+        let hover_options = || {
             if let Some(options) = &self.options {
                 options
                     .iter()
                     .find(|(_, option_span)| option_span.contains(col))
-                    .and_then(|(option, span)| option.get_hover(col, keywords))
+                    .and_then(|(option, _)| option.get_hover(col, keywords))
             }
             else {
                 None
             }
         };
 
-        hoverOptions().or(hoverAction())
+        hover_options().or(hover_action())
     }
 }

@@ -7,9 +7,8 @@
 //! 
 //! [VSCode API docs]: https://code.visualstudio.com/api/language-extensions/semantic-highlight-guide
 //! [Semantic Highlighting Overview]: https://github.com/microsoft/vscode/wiki/Semantic-Highlighting-Overview
-use std::ops::Range;
 
-use crate::rule::{Rule, Spanned, header::{NetworkAddress, NetworkPort}, options::{RuleOption, OptionsVariable}, Semantics};
+use crate::rule::{Rule, Spanned, Semantics};
 use tower_lsp::lsp_types::SemanticTokenType;
 
 /// A struct which stores only the most important information about the token
@@ -42,7 +41,7 @@ pub const LEGEND_TYPE: &[SemanticTokenType] = &[
 pub fn semantic_token_from_rule(
     rule: &Spanned<Rule>,
     col: &usize,
-    mut semantic_tokens: &mut Vec<ImCompleteSemanticToken>,
+    semantic_tokens: &mut Vec<ImCompleteSemanticToken>,
 ) {
     let (rule, _) = rule;
     rule.get_semantics(col, semantic_tokens);
