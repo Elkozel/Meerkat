@@ -9,8 +9,14 @@ use std::net::Ipv4Addr;
 use std::net::Ipv6Addr;
 use std::{net::IpAddr::V4, net::IpAddr::V6, ops::Range};
 
+use crate::rule::header::Header;
+use crate::rule::header::NetworkAddress;
+use crate::rule::header::NetworkDirection;
+use crate::rule::header::NetworkPort;
+use crate::rule::options::OptionsVariable;
+use crate::rule::options::RuleOption;
 use crate::rule::{
-    Header, NetworkAddress, NetworkDirection, NetworkPort, OptionsVariable, Rule, RuleOption, Span,
+    Rule, Span,
 };
 
 impl Rule {
@@ -32,7 +38,7 @@ impl Rule {
             .map_with_span(|((action, header), options), span| {
                 (
                     Rule {
-                        action: action,
+                        action: action.and_then(|(str, span)| Some((str.parse().unwrap(), span))),
                         header: header,
                         options: options,
                     },
@@ -93,7 +99,7 @@ impl NetworkAddress {
             });
 
             let any = text::keyword::<_, _, Simple<char>>("any")
-                .map_with_span(|_, span: Span| (NetworkAddress::Any, span));
+                .map_with_span(|_, span: Span| (NetworkAddress::Any(span.clone()), span));
             // Simple IPv4 address
             let ipv4 = digit
                 .separated_by(just("."))
@@ -182,10 +188,10 @@ impl NetworkPort {
                 ))
             });
             let any = text::keyword::<_, _, Simple<char>>("any")
-                .map_with_span(|_, span: Span| (NetworkPort::Any, span));
+                .map_with_span(|_, span: Span| (NetworkPort::Any(span.clone()), span));
             // Just a number
             let port_number = number
-                .map(|(port, span)| (NetworkPort::Port(port), span))
+                .map(|(port, span)| (NetworkPort::Port((port, span.clone())), span))
                 .padded();
             // Port range: 1:32
             let port_range = number

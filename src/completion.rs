@@ -7,7 +7,7 @@ use std::collections::{HashMap, HashSet};
 use ropey::RopeSlice;
 use tower_lsp::lsp_types::{CompletionItem, CompletionItemKind};
 
-use crate::{rule::{NetworkAddress, NetworkPort, AST}, suricata::Keyword};
+use crate::{rule::{AST, header::{NetworkPort, NetworkAddress}}, suricata::Keyword};
 
 /// Fetches the completion options for the signature
 pub fn get_completion(

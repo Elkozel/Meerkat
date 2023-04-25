@@ -5,7 +5,7 @@
 //! These functions include:
 //! - Parsing logs
 //! - Fetching errors and generating diagnostics
-//! - Fetching keywords (TODO)
+//! - Fetching keywords
 
 use chrono::{DateTime, FixedOffset, Local, NaiveDate};
 use chumsky::{
