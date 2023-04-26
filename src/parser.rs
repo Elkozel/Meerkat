@@ -15,9 +15,7 @@ use crate::rule::header::NetworkDirection;
 use crate::rule::header::NetworkPort;
 use crate::rule::options::OptionsVariable;
 use crate::rule::options::RuleOption;
-use crate::rule::{
-    Rule, Span,
-};
+use crate::rule::{Rule, Span};
 
 impl Rule {
     /// Provides a parser for a signature
@@ -31,7 +29,8 @@ impl Rule {
             .delimited_by(just("("), just(")"))
             .padded();
 
-        action.or_not()
+        action
+            .or_not()
             .then(Header::parser().padded())
             .then(options.or_not())
             .then_ignore(end())
@@ -62,7 +61,8 @@ impl Header {
             .padded()
             .then(NetworkPort::parser().or_not().padded());
 
-        protocol.or_not()
+        protocol
+            .or_not()
             .then(address_port_combined)
             .then(NetworkDirection::parser().or_not().padded())
             .then(address_port_combined2)
@@ -300,13 +300,16 @@ impl RuleOption {
                 (OptionsVariable::String((value, span.clone())), span)
             });
 
+        // Keyword (fast_pattern;)
         let keyword = none_of::<_, _, Simple<char>>(":;)")
+            .padded()
             .repeated()
+            .at_least(1) // Otherwise an empty input is a valid keyword
             .collect::<String>()
             .padded()
             .map_with_span(|keyword, span| (keyword, span));
 
-        // Keyword pair (msg: "...")
+        // Keyword pair (msg: "...";)
         let keyword_pair = keyword
             .clone()
             .padded()

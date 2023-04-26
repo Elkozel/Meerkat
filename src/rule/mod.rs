@@ -77,13 +77,18 @@ impl fmt::Display for Rule {
         if let Some((action, _)) = &self.action {
             write!(f, "{} ", action)?
         }
-        write!(f, "{} ", &self.header.0)?;
+        write!(f, "{}", &self.header.0)?;
         if let Some(option) = &self.options {
+            // If the array is empty, skip this step
+            if option.is_empty() {
+                return write!(f, "()");
+            }
+
             let options = option
                 .iter()
                 .map(|(option, _)| option.to_string())
                 .collect::<Vec<String>>();
-            write!(f, "{} ", options.join("; "))
+            write!(f, "({};)", options.join("; "))
         } else {
             write!(f, "")
         }

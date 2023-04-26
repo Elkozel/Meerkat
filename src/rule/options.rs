@@ -90,7 +90,7 @@ impl fmt::Display for RuleOption {
                     .collect::<Vec<String>>();
                 write!(f, "{}: {}", key, options.join(", "))
             }
-            RuleOption::Buffer((keyword, _)) => write!(f, "{}", keyword),
+            RuleOption::Buffer((keyword, _)) => write!(f, "{}", keyword.to_string()),
         }
     }
 }
