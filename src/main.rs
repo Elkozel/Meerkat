@@ -437,7 +437,7 @@ impl LanguageServer for Backend {
             let ast = self.ast_map.get(&uri.to_string())?;
             let offset = position.character as usize;
             let completions =
-                get_completion(&line, &ast, &offset, &self.variables, &self.keywords)?;
+                get_completion(position.line, &ast, offset, &self.variables, &self.keywords)?;
             Some(completions)
         }();
         Ok(completions.map(CompletionResponse::Array))

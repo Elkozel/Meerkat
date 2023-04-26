@@ -26,7 +26,7 @@ use crate::{
 
 use self::{
     action::Action,
-    header::{Header, NetworkAddress, NetworkPort},
+    header::{Header, NetworkAddress, NetworkPort, NetworkDirection},
     options::RuleOption,
 };
 pub mod action;
@@ -95,6 +95,11 @@ impl fmt::Display for Rule {
     }
 }
 impl Rule {
+    pub fn protocol(&self) -> &Option<Spanned<String>> {
+        let (header, _) = &self.header;
+        &header.protocol
+
+    }
     /// Get the source network address from the header
     pub fn source(&self) -> &Option<Spanned<NetworkAddress>> {
         let (header, _) = &self.header;
@@ -104,6 +109,11 @@ impl Rule {
     pub fn source_port(&self) -> &Option<Spanned<NetworkPort>> {
         let (header, _) = &self.header;
         &header.source_port
+    }
+    /// Get the direction from the header
+    pub fn direction(&self) -> &Option<Spanned<NetworkDirection>> {
+        let (header, _) = &self.header;
+        &header.direction
     }
     /// Get the destination network address from the header
     pub fn destination(&self) -> &Option<Spanned<NetworkAddress>> {
