@@ -1,9 +1,9 @@
 use ipnet::IpNet;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::{fmt, net::IpAddr};
-use tower_lsp::lsp_types::MarkupContent;
-use tower_lsp::lsp_types::SemanticTokenType;
-use tower_lsp::lsp_types::{CompletionItem, CompletionItemKind, HoverContents};
+use tower_lsp::lsp_types::{
+    CompletionItem, CompletionItemKind, HoverContents, MarkupContent, SemanticTokenType,
+};
 
 use crate::rule::Span;
 use crate::rule::Spanned;
@@ -444,7 +444,7 @@ impl Semantics for NetworkPort {
                     length: span.len(),
                     token_type: LEGEND_TYPE
                         .iter()
-                        .position(|item| item == &SemanticTokenType::NUMBER)
+                        .position(|item| item == &SemanticTokenType::KEYWORD)
                         .unwrap(),
                 });
             }
@@ -538,33 +538,55 @@ impl Hover for NetworkPort {
         }
     }
 }
-// impl Completions for NetworkPort {
-//     fn get_completion(
-//         variables: &std::collections::HashSet<String>,
-//         completion_tokens: &mut Vec<CompletionItem>,
-//     ) -> Option<Vec<CompletionItem>> {
-//         let common_ports = vec![
-//             CompletionItem{
-//                 label: String::from("SSH"),
-//                 insert_text: Some(String::from("22")),
-//                 kind: Some(CompletionItemKind::),
-//                 ..Default::default()
-//             }
-//             CompletionItem{
-//                 label: String::from("HTTP"),
-//                 insert_text: Some(String::from("80")),
-//                 kind: Some(CompletionItemKind::OPERATOR),
-//                 ..Default::default()
-//             }
-//             CompletionItem{
-//                 label: String::from("To Src"),
-//                 insert_text: Some(String::from("<-")),
-//                 kind: Some(CompletionItemKind::OPERATOR),
-//                 ..Default::default()
-//             }
-//         ];
-//     }
-// }
+impl Completions for NetworkPort {
+    fn get_completion(
+        address_variables: &HashSet<String>,
+        port_variables: &HashSet<String>,
+        completion_tokens: &mut Vec<CompletionItem>,
+    ) {
+        // Add all common ports
+        let mut all_competions = vec![
+            CompletionItem {
+                label: String::from("SSH"),
+                insert_text: Some(String::from("22")),
+                kind: Some(CompletionItemKind::VALUE),
+                ..Default::default()
+            },
+            CompletionItem {
+                label: String::from("HTTP"),
+                insert_text: Some(String::from("80")),
+                kind: Some(CompletionItemKind::VALUE),
+                ..Default::default()
+            },
+            CompletionItem {
+                label: String::from("HTTPS"),
+                insert_text: Some(String::from("443")),
+                kind: Some(CompletionItemKind::VALUE),
+                ..Default::default()
+            },
+            CompletionItem {
+                label: String::from("SMB"),
+                insert_text: Some(String::from("445")),
+                kind: Some(CompletionItemKind::VALUE),
+                ..Default::default()
+            },
+            CompletionItem {
+                label: String::from("Telnet"),
+                insert_text: Some(String::from("23")),
+                kind: Some(CompletionItemKind::VALUE),
+                ..Default::default()
+            },
+        ];
+        // Add any as a network port
+        all_competions.push(CompletionItem {
+            label: String::from("any"),
+            kind: Some(CompletionItemKind::CONSTANT),
+            ..Default::default()
+        });
+        // Add all port variables
+        completion_tokens.extend(all_competions);
+    }
+}
 
 /// Represents the networking direction
 #[derive(Debug, Hash, Clone, PartialEq, Eq)]
@@ -599,10 +621,11 @@ impl Hover for NetworkDirection {
 
 impl Completions for NetworkDirection {
     fn get_completion(
-        variables: &std::collections::HashSet<String>,
-        completion_tokens: &mut Vec<tower_lsp::lsp_types::CompletionItem>,
-    ) -> Option<Vec<tower_lsp::lsp_types::CompletionItem>> {
-        Some(vec![
+        address_variables: &HashSet<String>,
+        port_variables: &HashSet<String>,
+        completion_tokens: &mut Vec<CompletionItem>,
+    ) {
+        let completions = vec![
             CompletionItem {
                 label: String::from("To Src"),
                 insert_text: Some(String::from("<-")),
@@ -621,6 +644,7 @@ impl Completions for NetworkDirection {
                 kind: Some(CompletionItemKind::OPERATOR),
                 ..Default::default()
             },
-        ])
+        ];
+        completion_tokens.extend(completions);
     }
 }

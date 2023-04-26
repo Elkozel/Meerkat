@@ -1,6 +1,6 @@
 use ropey::Error;
-use std::{fmt, collections::HashSet};
 use std::str::FromStr;
+use std::{collections::HashSet, fmt};
 use tower_lsp::lsp_types::{CompletionItem, CompletionItemKind};
 
 use super::Completions;
@@ -52,9 +52,10 @@ impl FromStr for Action {
 
 impl Completions for Action {
     fn get_completion(
-        variables: &HashSet<String>,
+        address_variables: &HashSet<String>,
+        port_variables: &HashSet<String>,
         completion_tokens: &mut Vec<CompletionItem>,
-    ) -> Option<Vec<CompletionItem>> {
+    ) {
         // Create an array with all possible actions
         let possible_strings = vec![
             "alert",
@@ -67,15 +68,14 @@ impl Completions for Action {
         ];
 
         // Convert all string actions to CompletionItems
-        Some(
-            possible_strings
-                .iter()
-                .map(|action| CompletionItem {
-                    label: action.to_string(),
-                    kind: Some(CompletionItemKind::OPERATOR),
-                    ..Default::default()
-                })
-                .collect::<Vec<CompletionItem>>(),
-        )
+        let completions = possible_strings
+            .iter()
+            .map(|action| CompletionItem {
+                label: action.to_string(),
+                kind: Some(CompletionItemKind::OPERATOR),
+                ..Default::default()
+            })
+            .collect::<Vec<CompletionItem>>();
+        completion_tokens.extend(completions);
     }
 }

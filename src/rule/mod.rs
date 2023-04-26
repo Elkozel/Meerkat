@@ -51,10 +51,7 @@ pub trait Hover {
 }
 /// Trait, that shows a part of a rule can provide competion items
 pub trait Completions {
-    fn get_completion(
-        variables: &HashSet<String>,
-        completion_tokens: &mut Vec<CompletionItem>,
-    ) -> Option<Vec<CompletionItem>>;
+    fn get_completion(address_variables: &HashSet<String>, port_variables: &HashSet<String>, completion_tokens: &mut Vec<CompletionItem>);
 }
 
 /// Represents a given rulefile with a set of signatures, howver it does not have a tree structure.
