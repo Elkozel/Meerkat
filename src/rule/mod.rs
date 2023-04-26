@@ -12,7 +12,10 @@
 //! Furthermore, additionnal types are introduced to track the span of every part of the signatures
 //!
 //! [suricata docs]: https://suricata.readthedocs.io/en/suricata-6.0.0/rules/intro.html
-use std::{collections::HashMap, fmt};
+use std::{
+    collections::{HashMap, HashSet},
+    fmt,
+};
 
 use tower_lsp::lsp_types::{CompletionItem, HoverContents, SemanticTokenType};
 
@@ -48,7 +51,10 @@ pub trait Hover {
 }
 /// Trait, that shows a part of a rule can provide competion items
 pub trait Completions {
-    fn get_completion() -> Option<Vec<CompletionItem>>;
+    fn get_completion(
+        variables: &HashSet<String>,
+        completion_tokens: &mut Vec<CompletionItem>,
+    ) -> Option<Vec<CompletionItem>>;
 }
 
 /// Represents a given rulefile with a set of signatures, howver it does not have a tree structure.
@@ -175,8 +181,7 @@ impl Hover for Rule {
                     .iter()
                     .find(|(_, option_span)| option_span.contains(col))
                     .and_then(|(option, _)| option.get_hover(col, keywords))
-            }
-            else {
+            } else {
                 None
             }
         };

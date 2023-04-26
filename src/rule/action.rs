@@ -1,6 +1,9 @@
 use ropey::Error;
-use std::fmt;
+use std::{fmt, collections::HashSet};
 use std::str::FromStr;
+use tower_lsp::lsp_types::{CompletionItem, CompletionItemKind};
+
+use super::Completions;
 
 #[derive(Debug, Hash, Clone, PartialEq, Eq)]
 pub enum Action {
@@ -45,4 +48,34 @@ impl FromStr for Action {
     }
 
     type Err = Error;
+}
+
+impl Completions for Action {
+    fn get_completion(
+        variables: &HashSet<String>,
+        completion_tokens: &mut Vec<CompletionItem>,
+    ) -> Option<Vec<CompletionItem>> {
+        // Create an array with all possible actions
+        let possible_strings = vec![
+            "alert",
+            "pass",
+            "drop",
+            "reject",
+            "rejectsrc",
+            "rejectdst",
+            "rejectboth",
+        ];
+
+        // Convert all string actions to CompletionItems
+        Some(
+            possible_strings
+                .iter()
+                .map(|action| CompletionItem {
+                    label: action.to_string(),
+                    kind: Some(CompletionItemKind::OPERATOR),
+                    ..Default::default()
+                })
+                .collect::<Vec<CompletionItem>>(),
+        )
+    }
 }

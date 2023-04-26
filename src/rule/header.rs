@@ -1,9 +1,9 @@
 use ipnet::IpNet;
 use std::collections::HashMap;
 use std::{fmt, net::IpAddr};
-use tower_lsp::lsp_types::HoverContents;
 use tower_lsp::lsp_types::MarkupContent;
 use tower_lsp::lsp_types::SemanticTokenType;
+use tower_lsp::lsp_types::{CompletionItem, CompletionItemKind, HoverContents};
 
 use crate::rule::Span;
 use crate::rule::Spanned;
@@ -11,6 +11,7 @@ use crate::semantic_token::ImCompleteSemanticToken;
 use crate::semantic_token::LEGEND_TYPE;
 use crate::suricata::Keyword;
 
+use super::Completions;
 use super::Hover;
 use super::Semantics;
 
@@ -537,6 +538,33 @@ impl Hover for NetworkPort {
         }
     }
 }
+// impl Completions for NetworkPort {
+//     fn get_completion(
+//         variables: &std::collections::HashSet<String>,
+//         completion_tokens: &mut Vec<CompletionItem>,
+//     ) -> Option<Vec<CompletionItem>> {
+//         let common_ports = vec![
+//             CompletionItem{
+//                 label: String::from("SSH"),
+//                 insert_text: Some(String::from("22")),
+//                 kind: Some(CompletionItemKind::),
+//                 ..Default::default()
+//             }
+//             CompletionItem{
+//                 label: String::from("HTTP"),
+//                 insert_text: Some(String::from("80")),
+//                 kind: Some(CompletionItemKind::OPERATOR),
+//                 ..Default::default()
+//             }
+//             CompletionItem{
+//                 label: String::from("To Src"),
+//                 insert_text: Some(String::from("<-")),
+//                 kind: Some(CompletionItemKind::OPERATOR),
+//                 ..Default::default()
+//             }
+//         ];
+//     }
+// }
 
 /// Represents the networking direction
 #[derive(Debug, Hash, Clone, PartialEq, Eq)]
@@ -566,5 +594,33 @@ impl Hover for NetworkDirection {
         keywords: &HashMap<String, Keyword>,
     ) -> Option<Spanned<tower_lsp::lsp_types::HoverContents>> {
         None
+    }
+}
+
+impl Completions for NetworkDirection {
+    fn get_completion(
+        variables: &std::collections::HashSet<String>,
+        completion_tokens: &mut Vec<tower_lsp::lsp_types::CompletionItem>,
+    ) -> Option<Vec<tower_lsp::lsp_types::CompletionItem>> {
+        Some(vec![
+            CompletionItem {
+                label: String::from("To Src"),
+                insert_text: Some(String::from("<-")),
+                kind: Some(CompletionItemKind::OPERATOR),
+                ..Default::default()
+            },
+            CompletionItem {
+                label: String::from("To Dst"),
+                insert_text: Some(String::from("->")),
+                kind: Some(CompletionItemKind::OPERATOR),
+                ..Default::default()
+            },
+            CompletionItem {
+                label: String::from("Both"),
+                insert_text: Some(String::from("<>")),
+                kind: Some(CompletionItemKind::OPERATOR),
+                ..Default::default()
+            },
+        ])
     }
 }
