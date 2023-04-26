@@ -12,6 +12,7 @@ use crate::suricata::Keyword;
 
 use super::Hover;
 use super::Semantics;
+use super::Completions;
 
 /// Represents a variable inside the options of a signature
 ///

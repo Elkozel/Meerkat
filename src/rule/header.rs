@@ -349,6 +349,50 @@ impl Hover for NetworkAddress {
     }
 }
 
+impl Completions for NetworkAddress {
+    fn get_completion(
+        address_variables: &HashSet<String>,
+        port_variables: &HashSet<String>,
+        completion_tokens: &mut Vec<CompletionItem>,
+    ) {
+        // Push regularly used IPs
+        let regular_ips = vec![
+            (
+                "192.168.0.0/16".to_string(),
+                "RFC 1918 16-bit block".to_string(),
+            ),
+            (
+                "172.16.0.0./12".to_string(),
+                "RFC 1918 20-bit block".to_string(),
+            ),
+            (
+                "10.0.0.0/8".to_string(),
+                "RFC 1918 24-bit block".to_string(),
+            ),
+        ];
+        regular_ips.iter().for_each(|(ip, details)| {
+            completion_tokens.push(CompletionItem {
+                label: ip.clone(),
+                insert_text: Some(ip.clone()),
+                kind: Some(CompletionItemKind::CONSTANT),
+                detail: Some(details.clone()),
+                ..Default::default()
+            })
+        });
+
+        // Push variables
+        address_variables.iter().for_each(|var| {
+            completion_tokens.push(CompletionItem {
+                label: format!("${}", var),
+                insert_text: Some(var.clone()),
+                kind: Some(CompletionItemKind::VARIABLE),
+                detail: Some("Network address variable".to_string()),
+                ..Default::default()
+            })
+        });
+    }
+}
+
 /// Represents a network port (along with ranges of ports, variables, etc.)
 #[derive(Debug, Hash, Clone, PartialEq, Eq)]
 pub enum NetworkPort {
@@ -544,47 +588,40 @@ impl Completions for NetworkPort {
         port_variables: &HashSet<String>,
         completion_tokens: &mut Vec<CompletionItem>,
     ) {
-        // Add all common ports
-        let mut all_competions = vec![
-            CompletionItem {
-                label: String::from("SSH"),
-                insert_text: Some(String::from("22")),
-                kind: Some(CompletionItemKind::VALUE),
-                ..Default::default()
-            },
-            CompletionItem {
-                label: String::from("HTTP"),
-                insert_text: Some(String::from("80")),
-                kind: Some(CompletionItemKind::VALUE),
-                ..Default::default()
-            },
-            CompletionItem {
-                label: String::from("HTTPS"),
-                insert_text: Some(String::from("443")),
-                kind: Some(CompletionItemKind::VALUE),
-                ..Default::default()
-            },
-            CompletionItem {
-                label: String::from("SMB"),
-                insert_text: Some(String::from("445")),
-                kind: Some(CompletionItemKind::VALUE),
-                ..Default::default()
-            },
-            CompletionItem {
-                label: String::from("Telnet"),
-                insert_text: Some(String::from("23")),
-                kind: Some(CompletionItemKind::VALUE),
-                ..Default::default()
-            },
+        // Push commonly used ports
+        let common_ports = vec![
+            ("SSH", 22),
+            ("HTTP", 80),
+            ("HTTPS", 443),
+            ("SMB", 445),
+            ("Telnet", 23),
         ];
-        // Add any as a network port
-        all_competions.push(CompletionItem {
+        common_ports.into_iter().for_each(|(description, port)| {
+            completion_tokens.push(CompletionItem {
+                label: String::from(description),
+                insert_text: Some(String::from(port.to_string())),
+                kind: Some(CompletionItemKind::VALUE),
+                ..Default::default()
+            })
+        });
+
+        // Push any as a network port
+        completion_tokens.push(CompletionItem {
             label: String::from("any"),
             kind: Some(CompletionItemKind::CONSTANT),
             ..Default::default()
         });
-        // Add all port variables
-        completion_tokens.extend(all_competions);
+
+        // Push the port variables
+        port_variables.into_iter().for_each(|variable| {
+            completion_tokens.push(CompletionItem {
+                label: format!("${}", variable),
+                insert_text: Some(variable.clone()),
+                kind: Some(CompletionItemKind::VARIABLE),
+                detail: Some("Network port variable".to_string()),
+                ..Default::default()
+            })
+        });
     }
 }
 
@@ -625,26 +662,18 @@ impl Completions for NetworkDirection {
         port_variables: &HashSet<String>,
         completion_tokens: &mut Vec<CompletionItem>,
     ) {
-        let completions = vec![
-            CompletionItem {
-                label: String::from("To Src"),
-                insert_text: Some(String::from("<-")),
-                kind: Some(CompletionItemKind::OPERATOR),
-                ..Default::default()
-            },
-            CompletionItem {
-                label: String::from("To Dst"),
-                insert_text: Some(String::from("->")),
-                kind: Some(CompletionItemKind::OPERATOR),
-                ..Default::default()
-            },
-            CompletionItem {
-                label: String::from("Both"),
-                insert_text: Some(String::from("<>")),
-                kind: Some(CompletionItemKind::OPERATOR),
-                ..Default::default()
-            },
+        let all_directions = vec![
+            ("To Src", "<-"),
+            ("To Dst", "->"),
+            ("Both", "<>")
         ];
-        completion_tokens.extend(completions);
+        all_directions.into_iter().for_each(|(description, direction)| {
+            completion_tokens.push(CompletionItem {
+                label: String::from(description),
+                insert_text: Some(String::from(direction)),
+                kind: Some(CompletionItemKind::OPERATOR),
+                ..Default::default()
+            })
+        });
     }
 }
