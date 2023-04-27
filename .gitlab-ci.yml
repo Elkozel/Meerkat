@@ -51,13 +51,17 @@ test_windows:
     script:
         - apt update && apt upgrade -y 
         - apt install -y g++-mingw-w64-x86-64 
-        - rustup target add x86_64-pc-windows-gnu 
         - rustup toolchain install stable-x86_64-pc-windows-gnu
+        - rustup target add x86_64-pc-windows-gnu 
         - rustup target add x86_64-unknown-linux-gnu
         - rustup target add aarch64-unknown-linux-gnu
         - rustup target add i686-unknown-linux-gnu
         - rustup target add i686-pc-windows-gnu
-        - cargo build
+        - cargo build --target x86_64-pc-windows-gnu
+        - cargo build --target x86_64-unknown-linux-gnu
+        - cargo build --target aarch64-unknown-linux-gnu
+        - cargo build --target i686-unknown-linux-gnu
+        - cargo build --target i686-pc-windows-gnu
     rules:
         - if: '$CI_COMMIT_REF_NAME == "test-cross-compilation"'
     artifacts:
