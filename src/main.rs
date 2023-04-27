@@ -27,8 +27,9 @@ struct Backend {
     ast_map: DashMap<String, AST>,
     document_map: DashMap<String, Rope>,
     semantic_token_map: DashMap<String, Vec<ImCompleteSemanticToken>>,
-    keywords: HashMap<String, Keyword>,
-    variables: (HashSet<String>, HashSet<String>), // (address vars, port vars)
+    keywords: HashMap<String, Keyword>, 
+    port_variables: HashSet<String>,
+    address_variables: HashSet<String>,
 }
 
 #[tower_lsp::async_trait]
@@ -433,11 +434,12 @@ impl LanguageServer for Backend {
         let position = params.text_document_position.position;
         let completions = || -> Option<Vec<CompletionItem>> {
             let rope = self.document_map.get(&uri.to_string())?;
-            let line = rope.get_line(position.line as usize)?;
+            let line_text = rope.get_line(position.line as usize)?;
             let ast = self.ast_map.get(&uri.to_string())?;
+            let line = position.line as usize;
             let offset = position.character as usize;
             let completions =
-                get_completion(position.line, &ast, offset, &self.variables, &self.keywords)?;
+                get_completion(&ast, &line_text, line, offset, &self.address_variables, &self.port_variables, &self.keywords)?;
             Some(completions)
         }();
         Ok(completions.map(CompletionResponse::Array))
@@ -539,7 +541,8 @@ async fn main() {
         document_map: DashMap::new(),
         semantic_token_map: DashMap::new(),
         keywords: keywords,
-        variables: (HashSet::new(), HashSet::new()),
+        port_variables: HashSet::new(),
+        address_variables: HashSet::new(),
     })
     .finish();
     Server::new(stdin, stdout, socket).serve(service).await;
