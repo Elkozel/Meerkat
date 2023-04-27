@@ -6,6 +6,7 @@ stages:
     - build client
     - check rust
     - package & deploy
+    - test windows
 
 before_script:
     # install nvm
@@ -25,6 +26,7 @@ build_client:
         - npx tsc -b
     rules:
         - if: '$CI_COMMIT_REF_NAME != "master"'
+        - if: '$CI_COMMIT_REF_NAME != "test-cross-compilation"'
 
 # Use cargo to check server
 # This is skipped on the main branch
@@ -34,6 +36,7 @@ check_rust:
         - cargo check
     rules:
         - if: '$CI_COMMIT_REF_NAME != "master"'
+        - if: '$CI_COMMIT_REF_NAME != "test-cross-compilation"'
 
 # Use vscode package tool to package the extenssion
 # This rule is only active on the main branch
@@ -43,4 +46,16 @@ package&deploy:
         - npx vsce package
     rules:
         - if: '$CI_COMMIT_REF_NAME == "master"'
-    
+
+# See if solution from the internet works
+test_windows:
+    stage: test windows
+    script:
+        - apt update &amp;&amp; apt upgrade -y 
+        - apt install -y g++-mingw-w64-x86-64 
+        - rustup target add x86_64-pc-windows-gnu 
+        - rustup toolchain install stable-x86_64-pc-windows-gnu 
+        - cargo build --target x86_64-pc-windows-gnu
+    rules:
+        - if: '$CI_COMMIT_REF_NAME == "master"'
+
