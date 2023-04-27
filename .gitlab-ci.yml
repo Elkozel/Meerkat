@@ -49,7 +49,7 @@ package&deploy:
 test_windows:
     stage: test windows
     script:
-        - apt update &amp;&amp; apt upgrade -y 
+        - apt update && apt upgrade -y 
         - apt install -y g++-mingw-w64-x86-64 
         - rustup target add x86_64-pc-windows-gnu 
         - rustup toolchain install stable-x86_64-pc-windows-gnu 
