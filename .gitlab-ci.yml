@@ -25,8 +25,7 @@ build_client:
     script:
         - npx tsc -b
     rules:
-        - if: '$CI_COMMIT_REF_NAME != "master"'
-        - if: '$CI_COMMIT_REF_NAME != "test-cross-compilation"'
+        - if: '$CI_COMMIT_REF_NAME != "master" and $CI_COMMIT_REF_NAME != "test-cross-compilation"'
 
 # Use cargo to check server
 # This is skipped on the main branch
@@ -35,8 +34,7 @@ check_rust:
     script:
         - cargo check
     rules:
-        - if: '$CI_COMMIT_REF_NAME != "master"'
-        - if: '$CI_COMMIT_REF_NAME != "test-cross-compilation"'
+        - if: '$CI_COMMIT_REF_NAME != "master" and $CI_COMMIT_REF_NAME != "test-cross-compilation"'
 
 # Use vscode package tool to package the extenssion
 # This rule is only active on the main branch
