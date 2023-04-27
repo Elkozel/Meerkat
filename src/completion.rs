@@ -7,14 +7,22 @@ use std::collections::{HashMap, HashSet};
 use ropey::RopeSlice;
 use tower_lsp::lsp_types::{CompletionItem, CompletionItemKind};
 
-use crate::{rule::{NetworkAddress, NetworkPort, AST}, suricata::Keyword};
+use crate::{
+    rule::{
+        header::{NetworkAddress, NetworkPort},
+        Completions, Rule, AST,
+    },
+    suricata::Keyword,
+};
 
 /// Fetches the completion options for the signature
 pub fn get_completion(
-    line: &RopeSlice,
     ast: &AST,
-    offset: &usize,
-    variables: &(HashSet<String>, HashSet<String>),
+    line_text: &RopeSlice,
+    _line: usize,
+    col: usize,
+    _address_variables: &HashSet<String>,
+    _port_variables: &HashSet<String>,
     keywords: &HashMap<String, Keyword>,
 ) -> Option<Vec<CompletionItem>> {
     let mut completion_tokens = vec![];
@@ -23,17 +31,61 @@ pub fn get_completion(
 
     // Get all variables
     get_variables_from_ast(ast, &mut address_variables, &mut port_variables);
-    // Generate completion tokens
-    if line.get_char(offset - 1)? == '$' {
-        get_completion_for_address(&address_variables, &mut completion_tokens);
-        get_completion_for_port(&port_variables, &mut completion_tokens);
-    }
-    else if line.get_char(offset - 2)? == ';' || line.get_char(offset - 1)? == '(' {
+    // match get_next_uncompleted(rule) {
+    //     Uncompleted::Action => {
+    //         Action::get_completion(&address_variables, &port_variables, &mut completion_tokens)
+    //     }
+    //     Uncompleted::Protocol => {}
+    //     Uncompleted::Direction => NetworkDirection::get_completion(
+    //         &address_variables,
+    //         &port_variables,
+    //         &mut completion_tokens,
+    //     ),
+    //     Uncompleted::Address => NetworkAddress::get_completion(
+    //         &address_variables,
+    //         &port_variables,
+    //         &mut completion_tokens,
+    //     ),
+    //     Uncompleted::Port => {
+    //         NetworkPort::get_completion(&address_variables, &port_variables, &mut completion_tokens)
+    //     }
+    //     Uncompleted::OptionKeyword => {
+    //         get_completion_for_option_keywords(keywords, &mut completion_tokens)
+    //     }
+    //     Uncompleted::Other => {}
+    // }
+    // Generate completion tokens (old way)
+    if line_text.get_char(col - 1)? == '$' {
+        NetworkAddress::get_completion(&address_variables, &port_variables, &mut completion_tokens);
+        NetworkPort::get_completion(&address_variables, &port_variables, &mut completion_tokens);
+    } else if line_text.get_char(col - 2)? == ';' || line_text.get_char(col - 1)? == '(' {
         get_completion_for_option_keywords(keywords, &mut completion_tokens);
-    }
-    else {
+    } else {
     }
     Some(completion_tokens)
+}
+
+fn get_next_uncompleted(rule: &Rule) -> Uncompleted {
+    // Check each part of the rule, if it is none, return it as needing completion
+    if rule.action.is_none() {
+        Uncompleted::Action
+    } else if rule.protocol().is_none() {
+        Uncompleted::Protocol
+    } else if rule.source().is_none() {
+        Uncompleted::Address
+    } else if rule.source_port().is_none() {
+        Uncompleted::Port
+    } else if rule.direction().is_none() {
+        Uncompleted::Direction
+    } else if rule.destination().is_none() {
+        Uncompleted::Address
+    } else if rule.destination_port().is_none() {
+        Uncompleted::Port
+    } else if rule.options.is_none() {
+        Uncompleted::OptionKeyword
+    } else {
+        Uncompleted::Other
+    }
 }
 
 enum Uncompleted {
@@ -43,64 +95,7 @@ enum Uncompleted {
     Address,
     Port,
     OptionKeyword,
-}
-
-/// Get completion options for Network addresses (IPs, variables, etc.)
-pub fn get_completion_for_address(
-    variables: &HashSet<String>,
-    completion_tokens: &mut Vec<CompletionItem>,
-) {
-    // // Push regular IPs
-    // let regular_ips = vec![
-    //     (
-    //         "192.168.0.0/16".to_string(),
-    //         "RFC 1918 16-bit block".to_string(),
-    //     ),
-    //     (
-    //         "172.16.0.0./12".to_string(),
-    //         "RFC 1918 20-bit block".to_string(),
-    //     ),
-    //     (
-    //         "10.0.0.0/8".to_string(),
-    //         "RFC 1918 24-bit block".to_string(),
-    //     ),
-    // ];
-    // regular_ips.iter().for_each(|(ip, details)| {
-    //     completion_tokens.push(CompletionItem {
-    //         label: ip.clone(),
-    //         insert_text: Some(ip.clone()),
-    //         kind: Some(CompletionItemKind::VARIABLE),
-    //         detail: Some(details.clone()),
-    //         ..Default::default()
-    //     })
-    // });
-    // Push variables
-    variables.iter().for_each(|var| {
-        completion_tokens.push(CompletionItem {
-            label: format!("${}", var),
-            insert_text: Some(var.clone()),
-            kind: Some(CompletionItemKind::VARIABLE),
-            detail: Some("Network address variable".to_string()),
-            ..Default::default()
-        })
-    });
-}
-
-/// Get completion for network ports
-pub fn get_completion_for_port(
-    variables: &HashSet<String>,
-    completion_tokens: &mut Vec<CompletionItem>,
-) {
-    // push variables
-    variables.into_iter().for_each(|var| {
-        completion_tokens.push(CompletionItem {
-            label: format!("${}", var),
-            insert_text: Some(var.clone()),
-            kind: Some(CompletionItemKind::VARIABLE),
-            detail: Some("Network port variable".to_string()),
-            ..Default::default()
-        })
-    })
+    Other,
 }
 
 /// Get completion for the options inside the signature

@@ -27,8 +27,9 @@ struct Backend {
     ast_map: DashMap<String, AST>,
     document_map: DashMap<String, Rope>,
     semantic_token_map: DashMap<String, Vec<ImCompleteSemanticToken>>,
-    keywords: HashMap<String, Keyword>,
-    variables: (HashSet<String>, HashSet<String>), // (address vars, port vars)
+    keywords: HashMap<String, Keyword>, 
+    port_variables: HashSet<String>,
+    address_variables: HashSet<String>,
 }
 
 #[tower_lsp::async_trait]
@@ -433,11 +434,12 @@ impl LanguageServer for Backend {
         let position = params.text_document_position.position;
         let completions = || -> Option<Vec<CompletionItem>> {
             let rope = self.document_map.get(&uri.to_string())?;
-            let line = rope.get_line(position.line as usize)?;
+            let line_text = rope.get_line(position.line as usize)?;
             let ast = self.ast_map.get(&uri.to_string())?;
+            let line = position.line as usize;
             let offset = position.character as usize;
             let completions =
-                get_completion(&line, &ast, &offset, &self.variables, &self.keywords)?;
+                get_completion(&ast, &line_text, line, offset, &self.address_variables, &self.port_variables, &self.keywords)?;
             Some(completions)
         }();
         Ok(completions.map(CompletionResponse::Array))
@@ -456,7 +458,21 @@ impl Backend {
         // Get the rope (text) for the file
         let rope = ropey::Rope::from_str(&params.text);
         // Run suricata already in the background
-        let suricata_process = verify_rule(&rope);
+        let suricata_process = async {
+            // Get the diagnostics from Suricata
+            let diagnostics = match verify_rule(&rope).await {
+                Ok(diagnostics) => {
+                    diagnostics
+                },
+                Err(_) => {
+                    vec![]
+                },
+            };
+            // Publish the diagnostics
+            self.client
+                .publish_diagnostics(params.uri.clone(), diagnostics, Some(params.version))
+                .await;
+        };
         // let diagnostics = vec![];
 
         self.document_map
@@ -500,19 +516,7 @@ impl Backend {
         self.ast_map.insert(params.uri.to_string(), ast);
         self.semantic_token_map
             .insert(params.uri.to_string(), semantic_tokens);
-
-        // Get the diagnostics from Suricata
-        let diagnostics = match suricata_process.await {
-            Ok(diagnostics) => {
-                diagnostics
-            },
-            Err(_) => {
-                vec![]
-            },
-        };
-        self.client
-            .publish_diagnostics(params.uri.clone(), diagnostics, Some(params.version))
-            .await;
+        suricata_process.await;
     }
 }
 
@@ -522,7 +526,7 @@ async fn main() {
 
     let stdin = tokio::io::stdin();
     let stdout = tokio::io::stdout();
-    let keywords = match get_keywords() {
+    let keywords = match get_keywords().await {
         Ok(keywords) => {
             keywords
         },
@@ -537,7 +541,8 @@ async fn main() {
         document_map: DashMap::new(),
         semantic_token_map: DashMap::new(),
         keywords: keywords,
-        variables: (HashSet::new(), HashSet::new()),
+        port_variables: HashSet::new(),
+        address_variables: HashSet::new(),
     })
     .finish();
     Server::new(stdin, stdout, socket).serve(service).await;
