@@ -82,6 +82,7 @@ services:
     - docker:18.09-dind
 
 test_deploy:
+    stage: test deploy
     script:
         - cross test --target arm-unknown-linux-gnueabihf
     rules:
