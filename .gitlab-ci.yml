@@ -44,6 +44,7 @@ package&deploy:
         - npx vsce package
     rules:
         - if: '$CI_COMMIT_REF_NAME == "master"'
+
 test_deploy:
     # stage: test windows old way
     # script:
@@ -63,7 +64,7 @@ test_deploy:
     # rules:
     #     - if: '$CI_COMMIT_REF_NAME == "test-cross-compilation"'
 
-    stage: test windows
+    stage: test deploy
     script:
         # Update apt
         - apt update && apt upgrade -y 
