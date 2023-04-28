@@ -84,6 +84,7 @@ services:
 test_deploy:
     stage: test deploy
     script:
+        - cargo install cross --git https://github.com/cross-rs/cross
         - cross test --target arm-unknown-linux-gnueabihf
     rules:
         - if: '$CI_COMMIT_REF_NAME == "test-cross-compilation"'
