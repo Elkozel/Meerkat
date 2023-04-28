@@ -45,90 +45,44 @@ package&deploy:
     rules:
         - if: '$CI_COMMIT_REF_NAME == "master"'
 
-test_deploy:
-    # stage: test windows old way
-    # script:
-    #     - apt update && apt upgrade -y 
-    #     - apt install -y g++-mingw-w64-x86-64 
-    #     - rustup toolchain install stable-x86_64-pc-windows-gnu
-    #     - rustup target add x86_64-pc-windows-gnu 
-    #     - rustup target add x86_64-unknown-linux-gnu
-    #     - rustup target add aarch64-unknown-linux-gnu
-    #     - rustup target add i686-unknown-linux-gnu
-    #     - rustup target add i686-pc-windows-gnu
-    #     - cargo build --target x86_64-pc-windows-gnu
-    #     - cargo build --target x86_64-unknown-linux-gnu
-    #     - cargo build --target aarch64-unknown-linux-gnu
-    #     - cargo build --target i686-unknown-linux-gnu
-    #     - cargo build --target i686-pc-windows-gnu
-    # rules:
-    #     - if: '$CI_COMMIT_REF_NAME == "test-cross-compilation"'
-
-    stage: test deploy
-    script:
-        # Update apt
-        - apt update && apt upgrade -y 
-        # Install docker
-        - apt install -y apt-transport-https ca-certificates curl gnupg2 software-properties-common > /dev/null
-        - curl -fsSL https://download.docker.com/linux/debian/gpg | apt-key add -
-        - add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/debian $(lsb_release -cs) stable"
-        - apt update
-        - apt install -y docker-ce > /dev/null
-        # Install cross
-        - cargo install cross --git https://github.com/cross-rs/cross
-        - cross build --target x86_64-pc-windows-gnu
-        - cross build --target x86_64-unknown-linux-gnu
-        - cross build --target aarch64-unknown-linux-gnu
-        - cross build --target i686-unknown-linux-gnu
-        - cross build --target i686-pc-windows-gnu
-    rules:
-        - if: '$CI_COMMIT_REF_NAME == "test-cross-compilation"'
-    artifacts:
-        name: "Compiled stuff"
-        paths:
-            - target/
-
 # test_deploy:
-#     stage: preparation
+#     stage: test deploy
 #     script:
 #         # Update apt
 #         - apt update && apt upgrade -y 
 #         # Install docker
-#         - curl -fsSL https://get.docker.com -o get-docker.sh
-#         - sudo sh get-docker.sh
+#         - apt install -y apt-transport-https ca-certificates curl gnupg2 software-properties-common > /dev/null
+#         - curl -fsSL https://download.docker.com/linux/debian/gpg | apt-key add -
+#         - add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/debian $(lsb_release -cs) stable"
+#         - apt update
+#         - apt install -y docker-ce > /dev/null
 #         # Install cross
-#         -  cargo install cross --git https://github.com/cross-rs/cross
-#     rules:
-#         - if: '$CI_COMMIT_REF_NAME == "test-cross-compilation"'
-# 
-#     stage: compile x64 Windows binary
-#     script:
+#         - cargo install cross --git https://github.com/cross-rs/cross
 #         - cross build --target x86_64-pc-windows-gnu
-#     rules:
-#         - if: '$CI_COMMIT_REF_NAME == "test-cross-compilation"'
-# 
-#     stage: compile x64 Linux binary
-#     script:
 #         - cross build --target x86_64-unknown-linux-gnu
-#     rules:
-#         - if: '$CI_COMMIT_REF_NAME == "test-cross-compilation"'
-# 
-#     stage: compile arch64 Linux binary
-#     script:
 #         - cross build --target aarch64-unknown-linux-gnu
-#     rules:
-#         - if: '$CI_COMMIT_REF_NAME == "test-cross-compilation"'
-# 
-#     stage: compile i686 Linux binary
-#     script:
 #         - cross build --target i686-unknown-linux-gnu
-#     rules:
-#         - if: '$CI_COMMIT_REF_NAME == "test-cross-compilation"'
-# 
-#     stage: compile i686 Windows binary
-#     script:
 #         - cross build --target i686-pc-windows-gnu
 #     rules:
 #         - if: '$CI_COMMIT_REF_NAME == "test-cross-compilation"'
-    
+#     artifacts:
+#         name: "Compiled stuff"
+#         paths:
+#             - target/
 
+variables:
+    # the host where the docker instance is running
+    DOCKER_HOST: tcp://docker:2375/
+    # use for much faster builds
+    DOCKER_DRIVER: overlay2
+    # ensure cross knows it's running remotely
+    CROSS_REMOTE: 1
+
+services:
+    - docker:18.09-dind
+
+test_deploy:
+    script:
+        - cross test --target arm-unknown-linux-gnueabihf
+    rules:
+        - if: '$CI_COMMIT_REF_NAME == "test-cross-compilation"'
