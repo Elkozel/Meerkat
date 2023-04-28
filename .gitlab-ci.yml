@@ -6,7 +6,7 @@ stages:
     - build client
     - check rust
     - package & deploy
-    - test windows
+    - test deploy
 
 before_script:
     # install nvm
@@ -46,7 +46,15 @@ package&deploy:
         - if: '$CI_COMMIT_REF_NAME == "master"'
 
 # See if solution from the internet works
-test_windows:
+test_deploy:
+    stage: Prepare linux environment
+    script:
+        - apt update && apt upgrade -y 
+        - apt install -y g++-mingw-w64-x86-64 
+    rules:
+        - if: '$CI_COMMIT_REF_NAME == "test-cross-compilation"'
+
+test_deploy:
     stage: test windows
     script:
         - apt update && apt upgrade -y 
@@ -69,3 +77,60 @@ test_windows:
         paths:
             - target/
 
+test_deploy:
+    stage: test windows
+    script:
+        - apt update && apt upgrade -y 
+        - apt install -y g++-mingw-w64-x86-64 
+        - rustup toolchain install stable-x86_64-pc-windows-gnu
+        - rustup target add x86_64-pc-windows-gnu 
+        - rustup target add x86_64-unknown-linux-gnu
+        - rustup target add aarch64-unknown-linux-gnu
+        - rustup target add i686-unknown-linux-gnu
+        - rustup target add i686-pc-windows-gnu
+        - cargo build --target x86_64-pc-windows-gnu
+        - cargo build --target x86_64-unknown-linux-gnu
+        - cargo build --target aarch64-unknown-linux-gnu
+        - cargo build --target i686-unknown-linux-gnu
+        - cargo build --target i686-pc-windows-gnu
+    rules:
+        - if: '$CI_COMMIT_REF_NAME == "test-cross-compilation"'
+    artifacts:
+        name: "Compiled stuff"
+        paths:
+            - target/
+
+test_deploy:
+    stage: test windows
+    script:
+        # Update apt
+        - apt update && apt upgrade -y 
+        # Install docker
+        - curl -fsSL https://get.docker.com -o get-docker.sh
+        - sudo sh get-docker.sh
+        # Install cross
+        - cargo install cross --git https://github.com/cross-rs/cross
+        - cross build --target x86_64-pc-windows-gnu
+        - cross build --target x86_64-unknown-linux-gnu
+        - cross build --target aarch64-unknown-linux-gnu
+        - cross build --target i686-unknown-linux-gnu
+        - cross build --target i686-pc-windows-gnu
+    rules:
+        - if: '$CI_COMMIT_REF_NAME == "test-cross-compilation"'
+    artifacts:
+        name: "Compiled stuff"
+        paths:
+            - target/
+
+# test_deploy:
+#     stage: preparation
+#     script:
+#         # Update apt
+#         - apt update && apt upgrade -y 
+#         # Install docker
+#         - curl -fsSL https://get.docker.com -o get-docker.sh
+#         - sudo sh get-docker.sh
+#         # Install cross
+#         -  cargo install cross --git https://github.com/cross-rs/cross
+#     rules:
+#         - if: '$CI_COMMIT_REF_NAME == "test-cross-compilation"'
