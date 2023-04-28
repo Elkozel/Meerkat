@@ -44,63 +44,25 @@ package&deploy:
         - npx vsce package
     rules:
         - if: '$CI_COMMIT_REF_NAME == "master"'
-
-# See if solution from the internet works
 test_deploy:
-    stage: Prepare linux environment
-    script:
-        - apt update && apt upgrade -y 
-        - apt install -y g++-mingw-w64-x86-64 
-    rules:
-        - if: '$CI_COMMIT_REF_NAME == "test-cross-compilation"'
+    # stage: test windows old way
+    # script:
+    #     - apt update && apt upgrade -y 
+    #     - apt install -y g++-mingw-w64-x86-64 
+    #     - rustup toolchain install stable-x86_64-pc-windows-gnu
+    #     - rustup target add x86_64-pc-windows-gnu 
+    #     - rustup target add x86_64-unknown-linux-gnu
+    #     - rustup target add aarch64-unknown-linux-gnu
+    #     - rustup target add i686-unknown-linux-gnu
+    #     - rustup target add i686-pc-windows-gnu
+    #     - cargo build --target x86_64-pc-windows-gnu
+    #     - cargo build --target x86_64-unknown-linux-gnu
+    #     - cargo build --target aarch64-unknown-linux-gnu
+    #     - cargo build --target i686-unknown-linux-gnu
+    #     - cargo build --target i686-pc-windows-gnu
+    # rules:
+    #     - if: '$CI_COMMIT_REF_NAME == "test-cross-compilation"'
 
-test_deploy:
-    stage: test windows
-    script:
-        - apt update && apt upgrade -y 
-        - apt install -y g++-mingw-w64-x86-64 
-        - rustup toolchain install stable-x86_64-pc-windows-gnu
-        - rustup target add x86_64-pc-windows-gnu 
-        - rustup target add x86_64-unknown-linux-gnu
-        - rustup target add aarch64-unknown-linux-gnu
-        - rustup target add i686-unknown-linux-gnu
-        - rustup target add i686-pc-windows-gnu
-        - cargo build --target x86_64-pc-windows-gnu
-        - cargo build --target x86_64-unknown-linux-gnu
-        - cargo build --target aarch64-unknown-linux-gnu
-        - cargo build --target i686-unknown-linux-gnu
-        - cargo build --target i686-pc-windows-gnu
-    rules:
-        - if: '$CI_COMMIT_REF_NAME == "test-cross-compilation"'
-    artifacts:
-        name: "Compiled stuff"
-        paths:
-            - target/
-
-test_deploy:
-    stage: test windows
-    script:
-        - apt update && apt upgrade -y 
-        - apt install -y g++-mingw-w64-x86-64 
-        - rustup toolchain install stable-x86_64-pc-windows-gnu
-        - rustup target add x86_64-pc-windows-gnu 
-        - rustup target add x86_64-unknown-linux-gnu
-        - rustup target add aarch64-unknown-linux-gnu
-        - rustup target add i686-unknown-linux-gnu
-        - rustup target add i686-pc-windows-gnu
-        - cargo build --target x86_64-pc-windows-gnu
-        - cargo build --target x86_64-unknown-linux-gnu
-        - cargo build --target aarch64-unknown-linux-gnu
-        - cargo build --target i686-unknown-linux-gnu
-        - cargo build --target i686-pc-windows-gnu
-    rules:
-        - if: '$CI_COMMIT_REF_NAME == "test-cross-compilation"'
-    artifacts:
-        name: "Compiled stuff"
-        paths:
-            - target/
-
-test_deploy:
     stage: test windows
     script:
         # Update apt
@@ -134,3 +96,35 @@ test_deploy:
 #         -  cargo install cross --git https://github.com/cross-rs/cross
 #     rules:
 #         - if: '$CI_COMMIT_REF_NAME == "test-cross-compilation"'
+# 
+#     stage: compile x64 Windows binary
+#     script:
+#         - cross build --target x86_64-pc-windows-gnu
+#     rules:
+#         - if: '$CI_COMMIT_REF_NAME == "test-cross-compilation"'
+# 
+#     stage: compile x64 Linux binary
+#     script:
+#         - cross build --target x86_64-unknown-linux-gnu
+#     rules:
+#         - if: '$CI_COMMIT_REF_NAME == "test-cross-compilation"'
+# 
+#     stage: compile arch64 Linux binary
+#     script:
+#         - cross build --target aarch64-unknown-linux-gnu
+#     rules:
+#         - if: '$CI_COMMIT_REF_NAME == "test-cross-compilation"'
+# 
+#     stage: compile i686 Linux binary
+#     script:
+#         - cross build --target i686-unknown-linux-gnu
+#     rules:
+#         - if: '$CI_COMMIT_REF_NAME == "test-cross-compilation"'
+# 
+#     stage: compile i686 Windows binary
+#     script:
+#         - cross build --target i686-pc-windows-gnu
+#     rules:
+#         - if: '$CI_COMMIT_REF_NAME == "test-cross-compilation"'
+    
+
