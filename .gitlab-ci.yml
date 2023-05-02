@@ -12,8 +12,9 @@ services:
 
 test:
   stage: test
-  image: haelty/rust-test-cross
+  image: rust:latest
   script:
-    - apt-get install -y nmap
-    - nmap -sT -p- docker
-
+    # Install cross
+    - cargo install cross --git https://github.com/cross-rs/cross
+    # Test compilation
+    - cross test --lib --target arm-linux-androideabi
