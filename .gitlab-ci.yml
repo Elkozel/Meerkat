@@ -8,13 +8,12 @@ variables:
     DOCKER_TLS_CERTDIR: ""
 
 services:
-    - docker:18.09-dind
+    - docker:dind
 
 test:
   stage: test
   image: haelty/rust-test-cross
   script:
-        #command to check docker port running
     - apt-get install -y nmap
     - nmap -sT -p- docker
 
