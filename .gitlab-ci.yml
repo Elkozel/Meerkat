@@ -17,5 +17,3 @@ test:
     - main
   script:
       - cross test --lib --target arm-linux-androideabi
-  rules:
-      - if: '$CI_COMMIT_REF_NAME == "test-cross-compilation"'
