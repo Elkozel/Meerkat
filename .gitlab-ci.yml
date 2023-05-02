@@ -13,7 +13,5 @@ services:
 test:
   stage: test
   image: haelty/rust-test-cross
-  only:
-    - main
   script:
       - cross test --lib --target arm-linux-androideabi
