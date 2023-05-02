@@ -2,7 +2,7 @@ stages:
   - test
 
 variables:
-    DOCKER_HOST: tcp://docker:2376/
+    DOCKER_HOST: tcp://docker:2375/
     DOCKER_DRIVER: overlay2
     CROSS_REMOTE: 1
     DOCKER_TLS_CERTDIR: ""
@@ -14,4 +14,7 @@ test:
   stage: test
   image: haelty/rust-test-cross
   script:
-      - cross test --lib --target arm-linux-androideabi
+        #command to check docker port running
+    - apt-get install -y nmap
+    - nmap -sT -p- docker
+
