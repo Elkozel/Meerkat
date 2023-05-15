@@ -82,11 +82,11 @@ export function activate(context: ExtensionContext) {
 					// Check if it is don't show again
 					else if (response === "Do not show again") {
 						workbenchConfig.update("ignoreSuricataErrors", true);
-						const undo = await window.showInformationMessage("Setting has been adjusted!", "undo");
-						if (undo) {
-							workbenchConfig.update("ignoreSuricataErrors", true);
+						window.showInformationMessage("Setting has been adjusted!", "undo").then(() => {
+							// If this function is executing, that means the undo button was touched
+							workbenchConfig.update("ignoreSuricataErrors", false);
 							window.showInformationMessage("Change has been undone!");
-						}
+						})
 					}
 				}
 			}
