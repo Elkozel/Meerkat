@@ -4,7 +4,7 @@
  * ------------------------------------------------------------------------------------------ */
 
 import * as path from 'path';
-import { workspace, ExtensionContext, window, commands, Uri, ViewColumn, TextDocument, TextEditor } from 'vscode';
+import { workspace, ExtensionContext, window, commands, Uri, TextDocument } from 'vscode';
 import * as os from "node:os";
 import * as fs from "node:fs";
 
@@ -12,9 +12,10 @@ import {
 	Executable,
 	LanguageClient,
 	LanguageClientOptions,
-	ServerOptions,
-	TransportKind
+	ServerOptions
 } from 'vscode-languageclient/node';
+import { Pcap, PcapProvider } from './pcapTree';
+import { executeSuricata } from "./suricata";
 
 let client: LanguageClient;
 
@@ -23,77 +24,20 @@ export function activate(context: ExtensionContext) {
 		window.showInformationMessage("Meerkat is here!");
 	});
 
-	const temporaryDirectory = fs.mkdtempSync(path.join(os.tmpdir(), "meerkat"));
-	const executeSuricata = commands.registerCommand("meerkat.executeSuricata", (uri: Uri) => {
-		// Return if no active file was found
-		if (window.activeTextEditor === undefined) {
-			window.showErrorMessage("No active rule file is selected, please open a rule file");
-			return;
-		}
-		//Return if no file is selected from the context menu
-		if (uri === undefined) {
-			window.showErrorMessage("No pcap file was, please select a pcap file");
-			return;
-		}
-		// Check if the file is actually a rules file
-		const rulesFile = window.activeTextEditor.document.uri.fsPath;
-		if (!rulesFile.trim().endsWith("rule") && !rulesFile.trim().endsWith("rules")) {
-			window.showWarningMessage("The file which is active does not have the rules extension!");
-		}
-
-		// Remove previous logs
-		removeFastLogs(temporaryDirectory);
-		const terminalName = "Run suricata";
-		// Create and run the teminal
-		window.createTerminal(terminalName, "suricata", [
-			"-S", window.activeTextEditor.document.uri.fsPath,
-			"-r", uri.fsPath,
-			"-l", temporaryDirectory
-		]);
-
-		// Open log file after terminal closes
-		window.onDidCloseTerminal(async t => {
-			if (t.name === terminalName) {
-				// Get configuration
-				const workbenchConfig = workspace.getConfiguration("meerkat");
-				const ignoreSuricata = workbenchConfig.get("ignoreSuricataErrors");
-				if (t.exitStatus.code === 0) {
-					// Open fast log
-					const fastLogUri = Uri.parse(path.join(temporaryDirectory, "fast.log"));
-					const opennedWindow = await window.showTextDocument(fastLogUri, {
-						"preserveFocus": true,
-						"viewColumn": ViewColumn.Beside,
-						"preview": true,
-					});
-					console.log(searchForTextDocument(opennedWindow.document));
-				}
-				else if (!ignoreSuricata) {
-					// Prompt the user
-					const response = await window.showErrorMessage(`The suricata process exited with code: ${t.exitStatus.reason}(${t.exitStatus.code})`
-						, ...["Open suricata logs", "Ignore", "Do not show again"]);
-					// Check if the user wants to open the suricata logs
-					if (response === "Open suricata logs") {
-						const suricataLog = Uri.parse(path.join(temporaryDirectory, "suricata.log"));
-						window.showTextDocument(suricataLog, {
-							"preserveFocus": false,
-							"viewColumn": ViewColumn.Active
-						});
-					}
-					// Check if it is don't show again
-					else if (response === "Do not show again") {
-						workbenchConfig.update("ignoreSuricataErrors", true);
-						window.showInformationMessage("Setting has been adjusted!", "undo").then(() => {
-							// If this function is executing, that means the undo button was touched
-							workbenchConfig.update("ignoreSuricataErrors", false);
-							window.showInformationMessage("Change has been undone!");
-						})
-					}
-				}
-			}
-		});
+	// Register the tree view
+	const treeDataProvider = new PcapProvider(Uri.parse(process.cwd(), true));
+	window.createTreeView("pcaps", {
+		treeDataProvider: treeDataProvider
 	});
+	// Register the comands for the tree view
+	commands.registerCommand("meerkat.pcaps.addFile", (uri?: Uri) => treeDataProvider.addFile(uri));
+	commands.registerCommand("meerkat.pcaps.execute", (file: Pcap) => { executeSuricata(file.filepath) })
+	commands.registerCommand("meerkat.pcaps.refresh", () => treeDataProvider.refresh());
+	commands.registerCommand("meerkat.pcaps.rebase", (uri: Uri) => treeDataProvider.rebase(uri)) // TODO
 
-	context.subscriptions.push(executeSuricata, hello);
+	const executeSuricataCommand = commands.registerCommand("meerkat.executeSuricata", (uri: Uri) => executeSuricata(uri));
+
+	context.subscriptions.push(executeSuricataCommand, hello);
 
 
 	const traceOutputChannel = window.createOutputChannel("Meerkat Language Server trace");
@@ -139,16 +83,7 @@ export function deactivate(): Thenable<void> | undefined {
 	return client.stop();
 }
 
-function removeFastLogs(folderPath: string) {
-	const fastLog = path.join(folderPath, "fast.log");
-	const fastLogOld = path.join(folderPath, "fast.log.old");
-	if (fs.existsSync(fastLog)) {
-		// Copy the file to old file (for usefullness)
-		fs.copyFileSync(fastLog, fastLogOld);
-		// Remove logs file
-		fs.truncateSync(fastLog, 0);
-	}
-}
+
 
 function searchForTextDocument(find: TextDocument) {
 	return window.visibleTextEditors.findIndex(editor => {
