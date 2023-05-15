@@ -21,7 +21,6 @@ export class PcapProvider implements vscode.TreeDataProvider<Pcap> {
 		this.rootFolder = root;
 		this.filePcapStorage = getPcaps(root);
 		this.additionalPcapStorage = [];
-		this.additionalPcapStorage.push(new Pcap(vscode.Uri.parse("/a/b/try1.pcap")));
 	}
 
 	/**
