@@ -134,7 +134,7 @@ export class PcapProvider implements vscode.TreeDataProvider<PcapTreeItem> {
 	 * @returns true, if the arrays contain such a filepath
 	 */
 	contains(filepath: vscode.Uri): boolean {
-		return this.pcapFiles.find(pcap => pcap.filepath.fsPath === filepath.fsPath) !== undefined; // and then check the additional array
+		return this.pcapFiles.find(pcap => pcap.filepath.fsPath === filepath.fsPath) !== undefined;
 	}
 
 	/**
@@ -145,7 +145,7 @@ export class PcapProvider implements vscode.TreeDataProvider<PcapTreeItem> {
 		// Remove filepath if it is inside a folder
 		this.pcapFiles.forEach(folder => folder.remove(filepath));
 		// Remove filepath if it is a single file
-		this.pcapFiles.filter(file => file.filepath.fsPath !== filepath.filepath.fsPath);
+		this.pcapFiles = this.pcapFiles.filter(file => file.filepath.fsPath !== filepath.filepath.fsPath);
 		this.refresh();
 	}
 
