@@ -26,7 +26,7 @@ export function executeSuricata(uri: Uri) {
 	removeFastLogs(temporaryDirectory);
 	// Create and run the teminal
 	const terminalName = "Run suricata";
-	window.createTerminal(terminalName, "suricata", [
+	window.createTerminal(terminalName, "suricata", [	
 		"-S", window.activeTextEditor.document.uri.fsPath,
 		"-r", uri.fsPath,
 		"-l", temporaryDirectory
@@ -56,7 +56,7 @@ export function executeSuricata(uri: Uri) {
 						switch (response) {
 							// Check if the user wants to open the suricata logs
 							case "Open suricata logs":
-								const suricataLog = Uri.parse(path.join(temporaryDirectory, "suricata.log"));
+								const suricataLog = Uri.parse(path.join("file:\\\\" + temporaryDirectory, "suricata.log"));
 								window.showTextDocument(suricataLog, {
 									"preserveFocus": false,
 									"viewColumn": ViewColumn.Active

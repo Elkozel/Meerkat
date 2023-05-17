@@ -25,7 +25,7 @@ export function activate(context: ExtensionContext) {
 	});
 
 	// Register the tree view
-	const treeDataProvider = new PcapProvider(Uri.parse(process.cwd(), true));
+	const treeDataProvider = new PcapProvider();
 	window.createTreeView("pcaps", {
 		treeDataProvider: treeDataProvider
 	});

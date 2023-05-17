@@ -93,7 +93,7 @@
 			"view/item/context": [
 				{
 					"command": "meerkat.pcaps.execute",
-					"when": "view == pcaps",
+					"when": "view == pcaps && viewItem == pcapFile",
 					"group": "inline"
 				},
 				{

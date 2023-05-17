@@ -4,10 +4,11 @@ import path = require('path');
 
 export class PcapFile extends vscode.TreeItem {
 	filepath: vscode.Uri;
-	iconPath = "$(symbol-file)";
+	iconPath = vscode.ThemeIcon.File;
+	contextValue = "pcapFile";
 
 	constructor(filepath: vscode.Uri) {
-		let filename = path.basename(filepath.fsPath, ".pcap");
+		let filename = path.basename(filepath.fsPath);
 		super(filename, vscode.TreeItemCollapsibleState.None);
 		this.filepath = filepath;
 	}
@@ -20,7 +21,8 @@ export class PcapFile extends vscode.TreeItem {
 export class PcapFolder extends vscode.TreeItem {
 	filepath: vscode.Uri;
 	pcapFiles: Map<string, PcapTreeItem>;
-	iconPath = "$(symbol-folder)";
+	iconPath = vscode.ThemeIcon.Folder;
+	contextValue = "pcapFolder";
 
 	constructor(filepath: vscode.Uri) {
 		super(filepath.fsPath, vscode.TreeItemCollapsibleState.Collapsed);
@@ -49,11 +51,9 @@ export class PcapProvider implements vscode.TreeDataProvider<PcapTreeItem> {
 	pcapFiles: PcapTreeItem[];
 	private _onDidChangeTreeData: vscode.EventEmitter<void | PcapFile | PcapFile[]> = new vscode.EventEmitter<void | PcapFile | PcapFile[]>();
 
-	constructor(private root: vscode.Uri) {
+	constructor() {
 		// Initialize the storage
 		this.pcapFiles = [];
-		// Add the root folder
-		this.pcapFiles.push(new PcapFolder(root));
 		this.refresh();
 	}
 
@@ -172,9 +172,9 @@ export class PcapProvider implements vscode.TreeDataProvider<PcapTreeItem> {
 }
 
 
-function getPcaps(path: vscode.Uri): PcapFile[] {
-	let pcapFileNames = fs.readdirSync(path.fsPath).filter(file => {
-		file.endsWith(".pcap");
+function getPcaps(rootPath: vscode.Uri): PcapFile[] {
+	let pcapFileNames = fs.readdirSync(rootPath.fsPath).filter(file => {
+		return file.endsWith(".pcap");
 	});
-	return pcapFileNames.map(file => new PcapFile(vscode.Uri.parse(file)));
+	return pcapFileNames.map(file => new PcapFile(vscode.Uri.parse(path.join(rootPath.fsPath, file))));
 }
