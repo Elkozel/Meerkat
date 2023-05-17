@@ -40,7 +40,7 @@ export function executeSuricata(uri: Uri) {
 			const ignoreSuricata = workbenchConfig.get("ignoreSuricataErrors");
 			if (t.exitStatus.code === 0) {
 				// Open fast log
-				const fastLogUri = Uri.parse(path.join(temporaryDirectory, "fast.log"));
+				const fastLogUri = Uri.parse(path.join("file:\\\\" + temporaryDirectory, "fast.log"), true);
 				const opennedWindow = await window.showTextDocument(fastLogUri, {
 					"preserveFocus": true,
 					"viewColumn": ViewColumn.Beside,

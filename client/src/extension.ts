@@ -14,7 +14,7 @@ import {
 	LanguageClientOptions,
 	ServerOptions
 } from 'vscode-languageclient/node';
-import { Pcap, PcapProvider } from './pcapTree';
+import { PcapFile, PcapProvider } from './pcapTree';
 import { executeSuricata } from "./suricata";
 
 let client: LanguageClient;
@@ -31,9 +31,10 @@ export function activate(context: ExtensionContext) {
 	});
 	// Register the comands for the tree view
 	commands.registerCommand("meerkat.pcaps.addFile", (uri?: Uri) => treeDataProvider.addFile(uri));
-	commands.registerCommand("meerkat.pcaps.execute", (file: Pcap) => { executeSuricata(file.filepath) })
+	commands.registerCommand("meerkat.pcaps.execute", (file: PcapFile) => { executeSuricata(file.filepath) })
 	commands.registerCommand("meerkat.pcaps.refresh", () => treeDataProvider.refresh());
-	commands.registerCommand("meerkat.pcaps.rebase", (uri: Uri) => treeDataProvider.rebase(uri)) // TODO
+	commands.registerCommand("meerkat.pcaps.remove", (file: PcapFile) => { treeDataProvider.remove(file) })
+	commands.registerCommand("meerkat.pcaps.addFolder", (uri: Uri) => treeDataProvider.addFolder(uri))
 
 	const executeSuricataCommand = commands.registerCommand("meerkat.executeSuricata", (uri: Uri) => executeSuricata(uri));
 

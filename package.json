@@ -44,19 +44,19 @@
 				"icon": "$(play)"
 			},
 			{
-				"title": "Change PCAP Directory",
-				"command": "meerkat.pcaps.rebase",
-				"icon": "$(folder-library)"
+				"title": "Remove a PCAP file",
+				"command": "meerkat.pcaps.remove",
+				"icon": "$(remove)"
+			},
+			{
+				"title": "Add a PCAP Directory",
+				"command": "meerkat.pcaps.addFolder",
+				"icon": "$(new-folder)"
 			},
 			{
 				"title": "Add a PCAP file",
 				"command": "meerkat.pcaps.addFile",
-				"icon": "$(add)"
-			},
-			{
-				"title": "Refresh PCAP Files",
-				"command": "meerkat.pcaps.refresh",
-				"icon": "$(refresh)"
+				"icon": "$(file-add)"
 			},
 			{
 				"title": "Refresh PCAP Files",
@@ -75,7 +75,7 @@
 		"menus": {
 			"view/title": [
 				{
-					"command": "meerkat.pcaps.rebase",
+					"command": "meerkat.pcaps.addFolder",
 					"when": "view == pcaps",
 					"group": "navigation@1"
 				},
@@ -95,6 +95,11 @@
 					"command": "meerkat.pcaps.execute",
 					"when": "view == pcaps",
 					"group": "inline"
+				},
+				{
+					"command": "meerkat.pcaps.remove",
+					"when": "view == pcaps",
+					"group": "inline"
 				}
 			],
 			"explorer/context": [
@@ -104,6 +109,10 @@
 				},
 				{
 					"command": "meerkat.pcaps.addFile",
+					"group": "1_modification"
+				},
+				{
+					"command": "meerkat.pcaps.addFolder",
 					"group": "1_modification"
 				}
 			]
