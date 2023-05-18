@@ -64,18 +64,27 @@
 				"icon": "$(refresh)"
 			}
 		],
+		"viewsContainers": {
+			"activitybar": [
+				{
+					"id": "meerkat",
+					"title": "Meerkat",
+					"icon": "resources/meerkat.svg"
+				}
+			]
+		},
 		"views": {
-			"test": [
+			"meerkat": [
 				{
 					"id": "pcaps",
-					"name": "Test PCAPs"
+					"name": "PCAP Files"
 				}
 			]
 		},
 		"viewsWelcome": [
 			{
 				"view": "pcaps",
-				"contents": "No PCAP files added!\n[Add a PCAP file](command:meerkat.pcaps.addFile)\n[Add a PCAP folder](command:meerkat.pcaps.addFolder)"
+				"contents": "No PCAP files added:\n[Add a PCAP file](command:meerkat.pcaps.addFile)\n[Add a folder](command:meerkat.pcaps.addFolder)"
 			}
 		],
 		"menus": {
