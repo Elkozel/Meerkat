@@ -16,6 +16,7 @@ import {
 } from 'vscode-languageclient/node';
 import { PcapFile, PcapProvider } from './pcapTree';
 import { executeSuricata } from "./suricata";
+import { SuricataStatusBar } from './statusBar';
 
 let client: LanguageClient;
 
@@ -31,13 +32,15 @@ export function activate(context: ExtensionContext) {
 	});
 	// Register the comands for the tree view
 	commands.registerCommand("meerkat.pcaps.addFile", (uri?: Uri) => treeDataProvider.addFile(uri));
-	commands.registerCommand("meerkat.pcaps.execute", (file: PcapFile) => { executeSuricata(file.filepath) })
+	commands.registerCommand("meerkat.pcaps.execute", (file: PcapFile) => { executeSuricata(file.filepath) });
 	commands.registerCommand("meerkat.pcaps.refresh", () => treeDataProvider.refresh());
-	commands.registerCommand("meerkat.pcaps.remove", (file: PcapFile) => { treeDataProvider.remove(file) })
-	commands.registerCommand("meerkat.pcaps.addFolder", (uri: Uri) => treeDataProvider.addFolder(uri))
-
+	commands.registerCommand("meerkat.pcaps.remove", (file: PcapFile) => { treeDataProvider.remove(file) });
+	commands.registerCommand("meerkat.pcaps.addFolder", (uri: Uri) => treeDataProvider.addFolder(uri));
+	// Register the staus bar
+	const suricataStatusBar = new SuricataStatusBar();
+	commands.registerCommand("meerkat.status.refresh", () => suricataStatusBar.refresh())
+	// Register execute suricata command
 	const executeSuricataCommand = commands.registerCommand("meerkat.executeSuricata", (uri: Uri) => executeSuricata(uri));
-
 	context.subscriptions.push(executeSuricataCommand, hello);
 
 

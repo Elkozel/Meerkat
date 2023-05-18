@@ -62,6 +62,11 @@
 				"title": "Refresh PCAP Files",
 				"command": "meerkat.pcaps.refresh",
 				"icon": "$(refresh)"
+			},
+			{
+				"title": "Refresh Suricata status",
+				"command": "meerkat.status.refresh",
+				"icon": "$(refresh)"
 			}
 		],
 		"viewsContainers": {

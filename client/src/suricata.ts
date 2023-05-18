@@ -1,7 +1,10 @@
 import * as path from 'path';
-import { workspace, window, Uri, ViewColumn, TextDocument } from 'vscode';
+import { workspace, window, Uri, ViewColumn, TextDocument, StatusBarAlignment, commands } from 'vscode';
 import * as os from "node:os";
 import * as fs from "node:fs";
+import which = require('which');
+const util = require('util');
+const exec = util.promisify(require('child_process').exec);
 
 const temporaryDirectory = fs.mkdtempSync(path.join(os.tmpdir(), "meerkat"));
 
@@ -26,7 +29,7 @@ export function executeSuricata(uri: Uri) {
 	removeFastLogs(temporaryDirectory);
 	// Create and run the teminal
 	const terminalName = "Run suricata";
-	window.createTerminal(terminalName, "suricata", [	
+	window.createTerminal(terminalName, "suricata", [
 		"-S", window.activeTextEditor.document.uri.fsPath,
 		"-r", uri.fsPath,
 		"-l", temporaryDirectory
@@ -96,4 +99,35 @@ function searchForTextDocument(find: TextDocument) {
 	return window.visibleTextEditors.findIndex(editor => {
 		editor.document.fileName == find.fileName;
 	}) == -1;
+}
+
+export interface SuricataInfo {
+	version: string,
+	asService: boolean
+}
+export async function getSuricataInfo(): Promise<SuricataInfo | null> {
+	try {
+		which.sync('suricata') // see if suricata is installed
+		const { stdout, stderr } = await exec("suricata -V");
+		/*
+			18/5/2023 -- 22:36:55 - <Info> - Running as service: no 
+			This is Suricata version 6.0.9 RELEASE
+		*/
+		let commandLines: string[] = stdout.split('\n');
+		// Extract the "Running as a service"
+		let position = commandLines[0].indexOf("Running as service:") + "Running as service:".length;
+		let serviceBoolText = commandLines[0].substring(position).trim();
+		let serviceBool = serviceBoolText === "yes" ? true : false;
+		// Extract the version of suricata
+		position = commandLines[1].indexOf("Suricata version") + "Suricata version".length;
+		let suricataVersion = commandLines[1].substring(position).trim();
+		return {
+			"asService": serviceBool,
+			"version": suricataVersion
+		}
+	}
+	catch (err) {
+		console.log(`Checking suricata produced the following error: ${err}`);
+		return null;
+	}
 }
