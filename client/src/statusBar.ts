@@ -25,7 +25,9 @@ export class SuricataStatusBar {
 		else {
 			this.statusBarItem.backgroundColor = undefined;
 			this.statusBarItem.text = `$(check) Suricata version ${this.suricataInfo.version}`;
-			this.statusBarItem.tooltip = `Suricata version ${this.suricataInfo.version} found. \n Running as a service: ${this.suricataInfo.asService ? "yes" : "no"} \n Click to refresh`;
+			this.statusBarItem.tooltip = `Suricata version ${this.suricataInfo.version} found.\n`;
+			this.statusBarItem.tooltip = `Running as a service: ${this.suricataInfo.asService ? "yes" : "no"} \n`;
+			this.statusBarItem.tooltip = `Click to refresh`;
 		}
 		this.statusBarItem.show();
 	}
