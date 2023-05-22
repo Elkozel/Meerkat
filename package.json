@@ -151,17 +151,24 @@
 		]
 	},
 	"scripts": {
-		"vscode:prepublish": "npm run compile",
-		"compile": "tsc -b && npm run compile-server",
-		"compile-server": "cargo install --path .",
 		"watch": "tsc -b -w",
 		"lint": "eslint ./client/src --ext .ts,.tsx",
-		"postinstall": "npm run install-client && npm run install-server",
+		"vscode:prepublish": "npm run compile",
+
 		"test": "sh ./scripts/e2e.sh",
+		"test-server": "cargo test",
+
+		"compile": "tsc -b && npm run compile-server",
+		"compile-server": "cargo install --path .",
+
+		"postinstall": "npm run install-client && npm run install-server",
 		"install-rust": "curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh",
 		"install-client": "cd client && npm install && cd ..",
 		"install-server": "cd src && cargo update && cargo build && cd ..",
-		"update": "npm update && cd client && npm update && cd ../src/ && cargo update"
+
+		"update": "npm update && npm run update-client && npm run update-server",
+		"update-client": "cd client && npm update && cd ..",
+		"update-server": "cargo update"
 	},
 	"devDependencies": {
 		"@types/mocha": "^9.1.0",
