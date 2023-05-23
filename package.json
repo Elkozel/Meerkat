@@ -4,6 +4,7 @@
 	"description": "Suricata/Snort VSCode extenssion",
 	"author": "Tsvetomir Hristov",
 	"publisher": "ELKozel",
+	"repository": "https://github.com/Elkozel",
 	"license": "MIT",
 	"version": "0.1.0",
 	"keywords": [
