@@ -1,7 +1,7 @@
 image: "rust:latest"
 stages:
   - build
-  - package
+  - package & publish
 
 build windows:
   stage: build
@@ -57,7 +57,7 @@ build_collect:
     - if: '$CI_COMMIT_REF_NAME == "test-cross-compilation"'
 
 package:
-  stage: package
+  stage: package & publish
   image: node:latest
   needs: 
     - build_collect
@@ -66,6 +66,7 @@ package:
   script:
     - npm i
     - npx vsce package
+    - npx vsce publish --pat '$DEPLOY_TOKEN' --target win32-x64 linux-x64
   artifacts:
     paths: 
       - meerkat*.vsix
