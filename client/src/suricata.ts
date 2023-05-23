@@ -13,19 +13,23 @@ const opt: ProgressOptions = {
 	location: ProgressLocation.Notification
 };
 
-export function executeSuricata(uri: Uri) {
+
+export function executeSuricata(pcap: Uri, rules?: Uri, removeLogs: boolean = true) {
 	// Return if no active file was found
 	if (window.activeTextEditor === undefined) {
 		window.showErrorMessage("No active rule file is selected, please open a rule file");
 		return;
 	}
 	//Return if no file is selected from the context menu
-	if (uri === undefined) {
+	if (pcap === undefined) {
 		window.showErrorMessage("No pcap file was, please select a pcap file");
 		return;
 	}
+
+	// Set the rules if they are not set
+	rules = rules ?? window.activeTextEditor.document.uri;
 	// Check if the file is actually a rules file
-	const rulesFile = window.activeTextEditor.document.uri.fsPath;
+	const rulesFile = rules.fsPath;
 	if (!rulesFile.trim().endsWith("rule") && !rulesFile.trim().endsWith("rules")) {
 		window.showWarningMessage("The file which is active does not have the rules extension!");
 	}
@@ -35,15 +39,17 @@ export function executeSuricata(uri: Uri) {
 		p.report({
 			message: "Removing fast logs"
 		});
-		removeFastLogs(temporaryDirectory);
+		if (removeLogs) {
+			removeFastLogs(temporaryDirectory);
+		}
 		// Create and run the teminal
 		p.report({
 			message: "Running suricata"
 		});
 		const terminalName = "Run suricata";
 		const terminal = window.createTerminal(terminalName, "suricata", [
-			"-S", window.activeTextEditor.document.uri.fsPath,
-			"-r", uri.fsPath,
+			"-S", rules.fsPath,
+			"-r", pcap.fsPath,
 			"-l", temporaryDirectory
 		]);
 
