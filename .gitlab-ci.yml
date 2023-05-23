@@ -10,11 +10,19 @@ variables:
 services:
     - docker:dind
 
-test:
-  stage: test
-  image: rust:latest
-  script:
-    # Install cross
-    - cargo install cross --git https://github.com/cross-rs/cross
-    # Test compilation
-    - cross test --lib --target arm-linux-androideabi
+test_windows:
+    stage: test
+    script:
+        - apt update && apt upgrade -y 
+        - apt install -y g++-mingw-w64-x86-64 
+        - rustup target add x86_64-pc-windows-gnu 
+        - rustup toolchain install stable-x86_64-pc-windows-gnu
+        - rustup target add x86_64-unknown-linux-gnu
+        - cargo build
+    rules:
+        - if: '$CI_COMMIT_REF_NAME == "test-cross-compilation"'
+    artifacts:
+        name: "Compiled stuff"
+        paths:
+            - target/
+
