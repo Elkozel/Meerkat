@@ -1,14 +1,6 @@
+image: "rust:latest"
 stages:
   - test
-
-variables:
-    DOCKER_HOST: tcp://docker:2375/
-    DOCKER_DRIVER: overlay2
-    CROSS_REMOTE: 1
-    DOCKER_TLS_CERTDIR: ""
-
-services:
-    - docker:dind
 
 test_windows:
     stage: test
