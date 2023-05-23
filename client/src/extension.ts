@@ -25,7 +25,7 @@ export function activate(context: ExtensionContext) {
 
 	const traceOutputChannel = window.createOutputChannel("Meerkat Language Server trace");
 	// const command = process.env.SERVER_PATH || "meerkat";
-	const command = process.env.SERVER_PATH || path.join(__dirname, "../../target/debug/meerkat");
+	const command = process.env.SERVER_PATH || path.join(__dirname, "../../server/release/meerkat");
 	const run: Executable = {
 		command,
 		options: {
