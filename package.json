@@ -154,18 +154,14 @@
 		"watch": "tsc -b -w",
 		"lint": "eslint ./client/src --ext .ts,.tsx",
 		"vscode:prepublish": "npm run compile",
-
 		"test": "sh ./scripts/e2e.sh",
 		"test-server": "cargo test",
-
 		"compile": "tsc -b && npm run compile-server",
 		"compile-server": "cargo install --path .",
-
 		"postinstall": "npm run install-client && npm run install-server",
 		"install-rust": "curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh",
 		"install-client": "cd client && npm install && cd ..",
 		"install-server": "cd src && cargo update && cargo build && cd ..",
-
 		"update": "npm update && npm run update-client && npm run update-server",
 		"update-client": "cd client && npm update && cd ..",
 		"update-server": "cargo update"
@@ -178,7 +174,7 @@
 		"@typescript-eslint/parser": "^5.30.0",
 		"eslint": "^8.13.0",
 		"mocha": "^9.2.1",
-		"typescript": "^4.8.4",
+		"typescript": "^5.0.4",
 		"vsce": "^2.14.0"
 	}
 }
