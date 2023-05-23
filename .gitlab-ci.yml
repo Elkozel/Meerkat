@@ -68,7 +68,7 @@ package:
     - npx vsce package
   artifacts:
     paths: 
-      - meerkat.vsix
+      - meerkat*.vsix
     when: on_success
     expire_in: 10 days
   rules:
