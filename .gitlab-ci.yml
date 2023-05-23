@@ -1,6 +1,7 @@
 image: "rust:latest"
 stages:
   - build
+  - package
 
 build windows:
   stage: build
@@ -14,7 +15,7 @@ build windows:
     - if: '$CI_COMMIT_REF_NAME == "test-cross-compilation"'
   artifacts:
     name: "Windows x86-64 compile"
-    expire_in: 30 min
+    expire_in: 10 min
     paths:
       -  target/x86_64-pc-windows-gnu/release/meerkat.exe
 
@@ -28,7 +29,7 @@ build linux:
     - if: '$CI_COMMIT_REF_NAME == "test-cross-compilation"'
   artifacts:
     name: "Linux x86-64 compile"
-    expire_in: 30 min
+    expire_in: 10 min
     paths:
       - target/x86_64-unknown-linux-gnu/release/meerkat
 
@@ -42,10 +43,34 @@ build_collect:
     - build windows
   script:
     # Create the directory for all executables
-    - mkdir -p ./server
+    - mkdir -p ./server/release
     # Copy the windows executable inside the server folder
-    - cp ./target/x86_64-pc-windows-gnu/release/meerkat.exe ./server
+    - cp ./target/x86_64-pc-windows-gnu/release/meerkat.exe ./server/release
     # Copy the linux executable inside the server folder
-    - cp ./target/x86_64-unknown-linux-gnu/release/meerkat ./server
+    - cp ./target/x86_64-unknown-linux-gnu/release/meerkat ./server/release
+  artifacts:
+    name: "Server executables"
+    expire_in: 30 min
+    paths:
+      - server/
+  rules:
+    - if: '$CI_COMMIT_REF_NAME == "test-cross-compilation"'
 
+package:
+  stage: package
+  image: node:latest
+  needs: 
+    - build_collect
+  dependencies:
+    - build_collect
+  script:
+    - npm i
+    - npx vsce package
+  artifacts:
+    paths: 
+      - meerkat.vsix
+    when: on_success
+    expire_in: 10 days
+  rules:
+    - if: '$CI_COMMIT_REF_NAME == "test-cross-compilation"'
   
