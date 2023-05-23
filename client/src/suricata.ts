@@ -9,7 +9,6 @@ const exec = util.promisify(require('child_process').exec);
 const temporaryDirectory = fs.mkdtempSync(path.join(os.tmpdir(), "meerkat"));
 
 const opt: ProgressOptions = {
-	title: "Executing suricata",
 	location: ProgressLocation.Notification
 };
 
