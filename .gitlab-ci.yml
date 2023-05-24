@@ -1,8 +1,24 @@
 image: "rust:latest"
 stages:
+  - check
   - build
+  - test
   - package & publish
 
+# Check if the client can be compiled without errors
+check client:
+    image: node:latest
+    stage: check
+    script:
+        - npx tsc -b
+
+# Check if the server can be compiled without errors
+check rust:
+    stage: check
+    script:
+        - cargo check
+
+# Compile the server for Windows x86-64
 build windows:
   stage: build
   script:
@@ -19,6 +35,7 @@ build windows:
     paths:
       -  target/x86_64-pc-windows-gnu/release/meerkat.exe
 
+# Compile the server for Linux x86-64
 build linux:
   stage: build
   script:
@@ -33,6 +50,7 @@ build linux:
     paths:
       - target/x86_64-unknown-linux-gnu/release/meerkat
 
+# Gather all the executable files into one
 build_collect:
   stage: build
   needs:
@@ -56,11 +74,35 @@ build_collect:
   rules:
     - if: '$CI_COMMIT_REF_NAME == "test-cross-compilation"'
 
-package:
+# Run tests for server
+test server:
+    stage: test
+    needs:
+        - check rust
+    script:
+        - cargo test
+    rules:
+        - if: '$CI_COMMIT_REF_NAME == "test-cross-compilation"'
+        
+# Run tests for client
+# test client:
+#     stage: test
+#     image: node:latest
+#     needs:
+#         - check client
+#     script:
+#     rules:
+#         - if: '$CI_COMMIT_REF_NAME == "master"'
+
+
+# Package and publish the extenssion
+package & publish:
   stage: package & publish
   image: node:latest
   needs: 
     - build_collect
+    - test server
+    - check client
   dependencies:
     - build_collect
   script:
@@ -73,5 +115,5 @@ package:
     when: on_success
     expire_in: 10 days
   rules:
-    - if: '$CI_COMMIT_REF_NAME == "test-cross-compilation"'
+    - if: '$CI_COMMIT_REF_NAME == "master"'
   
