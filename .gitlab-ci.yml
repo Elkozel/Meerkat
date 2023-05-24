@@ -102,7 +102,6 @@ package & publish:
   image: node:latest
   needs: 
     - build_collect
-    - test server
     - check client
   dependencies:
     - build_collect
