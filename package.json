@@ -6,7 +6,7 @@
 	"publisher": "ELKozel",
 	"repository": "https://github.com/Elkozel",
 	"license": "MIT",
-	"version": "0.1.0",
+	"version": "0.5.0",
 	"keywords": [
 		"lsp",
 		"vscode extenssion",
