@@ -3,8 +3,10 @@
 	"displayName": "Meerkat",
 	"description": "Suricata/Snort VSCode extenssion",
 	"author": "Tsvetomir Hristov",
+	"publisher": "ELKozel",
+	"repository": "https://github.com/Elkozel",
 	"license": "MIT",
-	"version": "0.1.0",
+	"version": "0.5.0",
 	"keywords": [
 		"lsp",
 		"vscode extenssion",
@@ -46,7 +48,7 @@
 	},
 	"scripts": {
 		"vscode:prepublish": "npm run compile",
-		"compile": "tsc -b && cargo install --path .",
+		"compile": "tsc -b",
 		"watch": "tsc -b -w",
 		"lint": "eslint ./client/src --ext .ts,.tsx",
 		"postinstall": "cd client && npm install && cd ..",

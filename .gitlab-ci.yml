@@ -1,46 +1,119 @@
-# This file is a template, and might need editing before it works on your project.
-# Official language image. Look for the different tagged releases at:
-# https://hub.docker.com/r/library/rust/tags/
 image: "rust:latest"
 stages:
-    - build client
-    - check rust
-    - package & deploy
+  - check
+  - build
+  - test
+  - package & publish
 
-before_script:
-    # install nvm
-    - "curl -o- https://raw.githubusercontent.com/creationix/nvm/v0.31.3/install.sh | bash"
-    # source bash
-    - "source ~/.bashrc"
-    # install npm and node
-    - "nvm install node"
-    # install project
-    - "npm install"
-
-# Use npm to build the project
-# This is skipped on the main branch
-build_client:
-    stage: build client
+# Check if the client can be compiled without errors
+check client:
+    image: node:latest
+    stage: check
     script:
+        - npm install
         - npx tsc -b
-    rules:
-        - if: '$CI_COMMIT_REF_NAME != "master"'
 
-# Use cargo to check server
-# This is skipped on the main branch
-check_rust:
-    stage: check rust
+# Check if the server can be compiled without errors
+check rust:
+    stage: check
     script:
         - cargo check
-    rules:
-        - if: '$CI_COMMIT_REF_NAME != "master"'
 
-# Use vscode package tool to package the extenssion
-# This rule is only active on the main branch
-package&deploy:
-    stage: package & deploy
-    script:
-        - npx vsce package
-    rules:
-        - if: '$CI_COMMIT_REF_NAME == "master"'
-    
+# Compile the server for Windows x86-64
+build windows:
+  stage: build
+  script:
+    - apt update && apt upgrade -y
+    - apt install -y g++-mingw-w64-x86-64
+    - rustup target add x86_64-pc-windows-gnu
+    - rustup toolchain install stable-x86_64-pc-windows-gnu
+    - cargo build --release --target x86_64-pc-windows-gnu
+  rules:
+    - if: '$CI_COMMIT_REF_NAME == "master"'
+  artifacts:
+    name: "Windows x86-64 compile"
+    expire_in: 10 min
+    paths:
+      -  target/x86_64-pc-windows-gnu/release/meerkat.exe
+
+# Compile the server for Linux x86-64
+build linux:
+  stage: build
+  script:
+    - apt update && apt upgrade -y
+    - rustup target add x86_64-unknown-linux-gnu
+    - cargo build --release --target x86_64-unknown-linux-gnu
+  rules:
+    - if: '$CI_COMMIT_REF_NAME == "master"'
+  artifacts:
+    name: "Linux x86-64 compile"
+    expire_in: 10 min
+    paths:
+      - target/x86_64-unknown-linux-gnu/release/meerkat
+
+# Gather all the executable files into one
+build_collect:
+  stage: build
+  needs:
+    - build linux
+    - build windows
+  dependencies:
+    - build linux
+    - build windows
+  script:
+    # Create the directory for all executables
+    - mkdir -p ./server/release
+    # Copy the windows executable inside the server folder
+    - cp ./target/x86_64-pc-windows-gnu/release/meerkat.exe ./server/release
+    # Copy the linux executable inside the server folder
+    - cp ./target/x86_64-unknown-linux-gnu/release/meerkat ./server/release
+  artifacts:
+    name: "Server executables"
+    expire_in: 30 min
+    paths:
+      - server/
+  rules:
+    - if: '$CI_COMMIT_REF_NAME == "master"'
+
+# Run tests for server
+# test server:
+#     stage: test
+#     needs:
+#         - check rust
+#     script:
+#         - cargo test
+#     rules:
+#         - if: '$CI_COMMIT_REF_NAME == "master"'
+        
+# Run tests for client
+# test client:
+#     stage: test
+#     image: node:latest
+#     needs:
+#         - check client
+#     script:
+#     rules:
+#         - if: '$CI_COMMIT_REF_NAME == "master"'
+
+
+# Package and publish the extenssion
+package & publish:
+  stage: package & publish
+  image: node:latest
+  needs: 
+    - build_collect
+    - check client
+  dependencies:
+    - build_collect
+  script:
+    - npm i
+    - npx vsce package
+    - npx vsce publish --pat $DEPLOY_TOKEN --target win32-x64 linux-x64
+  artifacts:
+    paths: 
+      - meerkat*.vsix
+    when: on_success
+    expire_in: 10 days
+  rules:
+    - if: '$CI_COMMIT_REF_NAME == "master"'
+  
