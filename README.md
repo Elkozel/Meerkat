@@ -5,15 +5,17 @@ Suricata/Snort formatter extension for VS Code
 ## Features
 Meerkat provides the following features:
 - Syntax highlighting
-- Signature checking with suricata
+### Signature checking with suricata
 ![Signature checking example](./media/Errors.gif)
-- Signature formatting
+### Signature formatting
 ![Signature formatting example](./media/auto-format.gif)
-- Hover information
+*The Auto-formatting uses the default hotkeys in your code editor*
+### Hover information
 ![Hover information example](./media/hover.gif)
-- Variable references/renaiming
+### Variable references/renaiming
 ![Variable renaiming example](./media/rename.gif)
-- Code completion
+*The rename feature uses the default hotkeys in your code editor*
+### Code completion
 ![Code completion example](./media/suggestion.gif)
 - Rule performance statistics (TODO)
 - Code snipplets (TOOD)
