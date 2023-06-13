@@ -38,17 +38,18 @@ jobs:
     needs: [compile-server]
     runs-on: ubuntu-latest
     steps: 
+      - uses: actions/checkout@v3
       - name: Show folders
         run: ls -R
       - name: Installing NPM
         run: npm install
-      - name: Packaging extenssion
-        run: npx vsce package
       - name: Downloading server
         uses: actions/download-artifact@v3
         with: 
           name: server
           path: server/release/
+      - name: Packaging extenssion
+        run: npx vsce package
     #   - name: Deploying extenssion
     #     run: npx vsce publish --pat $DEPLOY_TOKEN --target win32-x64 linux-x64
       - name: Uploading artifacts
