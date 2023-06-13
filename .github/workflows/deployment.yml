@@ -1,37 +1,11 @@
-name: Test-project
+name: Deployment
 
 on:
   push:
-#     branches: [ "main" ]
-  pull_request:
-#     branches: [ "main" ]
+    branches: [ "main" ]
   workflow_dispatch:
 
-env:
-  CARGO_TERM_COLOR: always
-
 jobs:
-  check-rust:
-    runs-on: ubuntu-latest
-    steps:
-    - uses: actions/checkout@v3
-    - name: Build
-      run: cargo build --verbose
-    - name: Run tests
-      run: cargo test --verbose
-  check-client:
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        node-version: [14.x, 16.x, 18.x, 20.x]
-    steps:
-      - uses: actions/checkout@v3
-      - name: Use Node.js ${{ matrix.node-version }}
-        uses: actions/setup-node@v3
-        with:
-          node-version: ${{ matrix.node-version }}
-      - name: Install Dependencies
-        run: npm install
   compile-server:
     name: Compile-server
     runs-on: ubuntu-latest
@@ -59,3 +33,22 @@ jobs:
         with:
           name: server
           path: target/${{ matrix.target }}/release/meerkat*
+  compile-client:
+    name: Deploy-extenssion
+    needs: [compile-server]
+    runs-on: ubuntu-latest
+    steps: 
+      - name: Installing NPM
+        run: npm install
+      - name: Packaging extenssion
+        run: npx vsce package
+    #   - name: Deploying extenssion
+    #     run: npx vsce publish --pat $DEPLOY_TOKEN --target win32-x64 linux-x64
+      - name: Uploading artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: extenssion
+          path: *.vsix 
+
+
+  
