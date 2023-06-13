@@ -54,3 +54,8 @@ jobs:
           use-cross: true
           command: build
           args: --release --target=${{ matrix.target }}
+      - name: Uploading artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: server
+          path: target/
