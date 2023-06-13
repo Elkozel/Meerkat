@@ -1,4 +1,4 @@
-name: Rust
+name: Test-project
 
 on:
   push:
@@ -38,7 +38,7 @@ jobs:
     strategy:
       matrix:
         target:
-          - x86_64-pc-windows-msvc
+          - x86_64-pc-windows-gnu
           - x86_64-unknown-linux-gnu
     steps:
       - uses: actions/checkout@v3
