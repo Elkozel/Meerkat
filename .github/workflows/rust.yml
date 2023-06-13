@@ -35,21 +35,23 @@ jobs:
   build-server-windows-x86:
     runs-on: ubuntu-latest
     steps: 
-      - name: Update APT
-        run: sudo apt update && sudo apt upgrade -y
+#       - name: Update APT
+#         run: sudo apt update && sudo apt upgrade -y
       - name: Install GCC tools
         run: sudo apt install -y g++-mingw-w64-x86-64
       - name: Add Windows x86_64 to the target
         run: rustup target add x86_64-pc-windows-gnu
       - name: Install toolchain
         run: rustup toolchain install stable-x86_64-pc-windows-gnu
+      - name: Show folder
+        run: ls -R
       - name: Compile project
         run: cargo build --release --target x86_64-pc-windows-gnu
   build-server-linux-x86:
     runs-on: ubuntu-latest
     steps: 
       - name: Update APT
-        run: sudo apt update && apt upgrade -y
+        run: sudo apt update && sudo apt upgrade -y
       - name: Add Linux x86_64 to the target
         run: rustup target add x86_64-unknown-linux-gnu
       - name: Compile project
