@@ -32,47 +32,25 @@ jobs:
           node-version: ${{ matrix.node-version }}
       - name: Install Dependencies
         run: npm install
-  build-server-windows-x86:
+  compile-server:
+    name: Compile-server
     runs-on: ubuntu-latest
-    steps: 
-#       - name: Update APT
-#         run: sudo apt update && sudo apt upgrade -y
-      - name: Install GCC tools
-        run: sudo apt install -y g++-mingw-w64-x86-64
-      - name: Add Windows x86_64 to the target
-        run: rustup target add x86_64-pc-windows-gnu
-      - name: Install toolchain
-        run: rustup toolchain install stable-x86_64-pc-windows-gnu
-      - name: Show folder
-        run: ls -R
-      - name: Compile project
-        run: cargo build --release --target x86_64-pc-windows-gnu
-  build-server-linux-x86:
-    runs-on: ubuntu-latest
-    steps: 
-      - name: Update APT
-        run: sudo apt update && sudo apt upgrade -y
-      - name: Add Linux x86_64 to the target
-        run: rustup target add x86_64-unknown-linux-gnu
-      - name: Compile project
-        run: cargo build --release --target x86_64-unknown-linux-gnu
-  bundle-server:
-    runs-on: ubuntu-latest
-    needs: [build-server-linux-x86, build-server-windows-x86]
-    steps: 
-      - name: Download build artifacts
-        uses: actions/download-artifact@v3
-      - name: Print directory structure
-        run: ls -R
-      - name: Create server directory
-        run: mkdir -p ./server/release
-      - name: Add Linux x86_64 to server directory
-        run: cp ./target/x86_64-unknown-linux-gnu/release/meerkat ./server/release
-      - name: Add Windows x86_64 to server directory
-        run: cp ./target/x86_64-pc-windows-gnu/release/meerkat.exe ./server/release
-      - name: Archive server
-        uses: actions/upload-artifact@v3
+    strategy:
+      matrix:
+        target:
+          - x86_64-pc-windows-msvc
+          - x86_64-unknown-linux-gnu
+    steps:
+      - uses: actions/checkout@v3
+      - name: Installing Toolchain
+        uses: actions-rs/toolchain@v1
         with:
-          name: server
-          path: server/
-          retention-days: 1
+          toolchain: stable
+          target: ${{ matrix.target }}
+          override: true
+      - name: Compiling for ${{ matrix.target }}
+        uses: actions-rs/cargo@v1
+        with:
+          use-cross: true
+          command: build
+          args: --release --target=${{ matrix.target }}
