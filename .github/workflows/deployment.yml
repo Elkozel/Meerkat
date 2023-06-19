@@ -2,12 +2,24 @@ name: Deploying extenssion
 
 on:
   push:
-    # branches: [ "main" ]
+    branches: [ "main" ]
   workflow_dispatch:
 
 jobs:
+  check-server:
+    name: Check LSP server
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    - name: Build LSP server
+      run: cargo build --verbose
+    - name: Check LSP server
+      run: cargo check --verbose
+    - name: Run tests for LSP server
+      run: cargo test --verbose
   compile-server:
     name: Compile-server
+    needs: [check-server]
     runs-on: ubuntu-latest
     strategy:
       matrix:

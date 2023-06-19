@@ -2,9 +2,9 @@ name: Compile and run tests
 
 on:
   push:
-#     branches: [ "main" ]
+    branches-ignore:
+      - main
   pull_request:
-#     branches: [ "main" ]
   workflow_dispatch:
 
 env:
@@ -16,9 +16,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v3
-    - name: Build
+    - name: Build LSP server
       run: cargo build --verbose
-    - name: Run tests
+    - name: Check LSP server
+      run: cargo check --verbose
+    - name: Run tests for LSP server
       run: cargo test --verbose
   check-client:
     name: Check LSP client
