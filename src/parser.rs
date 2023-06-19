@@ -26,6 +26,7 @@ impl Rule {
         let options = RuleOption::parser()
             .separated_by(just(";"))
             .allow_trailing()
+            .padded()
             .delimited_by(just("("), just(")"))
             .padded();
 
