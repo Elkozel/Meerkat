@@ -59,7 +59,7 @@ jobs:
         uses: actions/download-artifact@v3
         with: 
           name: server
-          path: server/release/
+          path: server/
       - name: Packaging extenssion
         run: npx vsce package
       - name: Uploading artifacts
