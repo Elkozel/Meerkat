@@ -153,11 +153,10 @@
 		]
 	},
 	"scripts": {
-		"vscode:prepublish": "npm run compile",
+		"vscode:prepublish": "tsc -b",
 		"compile": "tsc -b",
 		"watch": "tsc -b -w",
 		"lint": "eslint ./client/src --ext .ts,.tsx",
-		"vscode:prepublish": "tsc -b",
 		"test": "sh ./scripts/e2e.sh",
 		"install-rust": "curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh",
 		"cargo-install": "cargo build"
@@ -171,6 +170,6 @@
 		"eslint": "^8.13.0",
 		"mocha": "^9.2.1",
 		"typescript": "^5.0.4",
-		"vsce": "^2.14.0"
+		"@vscode/vsce": "^2.19.0"
 	}
 }
