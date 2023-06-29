@@ -26,6 +26,7 @@ impl Rule {
         let options = RuleOption::parser()
             .separated_by(just(";"))
             .allow_trailing()
+            .padded()
             .delimited_by(just("("), just(")"))
             .padded();
 
@@ -283,7 +284,7 @@ impl RuleOption {
         let escaped_chars = one_of::<_, _, Simple<char>>("\";\\").delimited_by(just("\\"), empty());
         let unescaped_value = escaped_chars
             .clone()
-            .or(none_of::<_, _, Simple<char>>(";,"))
+            .or(none_of::<_, _, Simple<char>>(";, "))
             .repeated()
             .collect::<String>()
             .map_with_span(|options, span: Span| {
@@ -301,7 +302,7 @@ impl RuleOption {
             });
 
         // Keyword (fast_pattern;)
-        let keyword = none_of::<_, _, Simple<char>>(":;)")
+        let keyword = none_of::<_, _, Simple<char>>(":;) ")
             .padded()
             .repeated()
             .at_least(1) // Otherwise an empty input is a valid keyword
