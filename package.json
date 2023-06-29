@@ -3,8 +3,10 @@
 	"displayName": "Meerkat",
 	"description": "Suricata/Snort VSCode extenssion",
 	"author": "Tsvetomir Hristov",
+	"publisher": "ELKozel",
+	"repository": "https://github.com/Elkozel/Meerkat.git",
 	"license": "MIT",
-	"version": "0.1.0",
+	"version": "0.5.0",
 	"keywords": [
 		"lsp",
 		"vscode extenssion",
@@ -151,20 +153,14 @@
 		]
 	},
 	"scripts": {
+		"vscode:prepublish": "npm run compile",
+		"compile": "tsc -b",
 		"watch": "tsc -b -w",
 		"lint": "eslint ./client/src --ext .ts,.tsx",
 		"vscode:prepublish": "tsc -b",
 		"test": "sh ./scripts/e2e.sh",
-		"test-server": "cargo test",
-		"compile": "tsc -b && npm run compile-server",
-		"compile-server": "cargo build --release && mkdir server && cp ./target/release/meerkat ./server && cp ./target/release/meerkat.exe ./server",
-		"postinstall": "npm run install-client",
 		"install-rust": "curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh",
-		"install-client": "cd client && npm install && cd ..",
-		"install-server": "cd src && cargo update && cargo build && cd ..",
-		"update": "npm update && npm run update-client && npm run update-server",
-		"update-client": "cd client && npm update && cd ..",
-		"update-server": "cargo update"
+		"cargo-install": "cargo build"
 	},
 	"devDependencies": {
 		"@types/mocha": "^9.1.0",

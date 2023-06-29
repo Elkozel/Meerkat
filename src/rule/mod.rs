@@ -2,12 +2,12 @@
 //!
 //! This module houses all the structures and basic functionallity for every rule
 //! The structure follows the structure explained in the [suricata docs]
-//! ```
-//! A rule/signature consists of the following:
-//! - The action, that determines what happens when the signature matches
-//! - The header, defining the protocol, IP addresses, ports and direction of the rule.
-//! - The rule options, defining the specifics of the rule.
-//! ```
+//! 
+//! > A rule/signature consists of the following:
+//! > - The action, that determines what happens when the signature matches
+//! > - The header, defining the protocol, IP addresses, ports and direction of the rule.
+//! > - The rule options, defining the specifics of the rule.
+//! 
 //!
 //! Furthermore, additionnal types are introduced to track the span of every part of the signatures
 //!

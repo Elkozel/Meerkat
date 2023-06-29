@@ -45,8 +45,8 @@ export function activate(context: ExtensionContext) {
 
 
 	const traceOutputChannel = window.createOutputChannel("Meerkat Language Server trace");
-	// const command = process.env.SERVER_PATH || "meerkat";
-	const command = process.env.SERVER_PATH || path.join(__dirname, "../../target/debug/meerkat");
+	// If the process environment SERVER_PATH is specified, use it, otherwise the executable should be in the default 
+	const command = process.env.SERVER_PATH ? path.join(__dirname, process.env.SERVER_PATH) : path.join(__dirname, "../../server/meerkat");
 	const run: Executable = {
 		command,
 		options: {

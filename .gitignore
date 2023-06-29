@@ -1,9 +1,9 @@
 out
 node_modules
+server
 client/server
 .vscode-test
 *.vsix
 
 # Added by cargo
-
 /target
