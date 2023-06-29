@@ -2,7 +2,7 @@ name: Deploying extenssion
 
 on:
   push:
-    branches: [ "test-workflow" ]
+    branches: [ "main" ]
   workflow_dispatch:
 
 jobs:
@@ -58,7 +58,7 @@ jobs:
           path: target/${{ matrix.target }}/release/meerkat*
   compile-client:
     name: Deploy-extenssion
-    needs: [compile-server]
+    needs: [compile-server, check-client]
     runs-on: ubuntu-latest
     steps: 
       - uses: actions/checkout@v3
