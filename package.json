@@ -153,10 +153,11 @@
 		]
 	},
 	"scripts": {
-		"vscode:prepublish": "tsc -b",
+		"vscode:prepublish": "npm run compile",
 		"compile": "tsc -b",
 		"watch": "tsc -b -w",
 		"lint": "eslint ./client/src --ext .ts,.tsx",
+		"postinstall": "cd client && npm install && cd ..",
 		"test": "sh ./scripts/e2e.sh",
 		"install-rust": "curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh",
 		"cargo-install": "cargo build"
