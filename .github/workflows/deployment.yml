@@ -2,7 +2,7 @@ name: Deploying extenssion
 
 on:
   push:
-    branches: [ "main" ]
+    branches: [ "test-workflow" ]
   workflow_dispatch:
 
 jobs:
