@@ -17,6 +17,17 @@ jobs:
       run: cargo check --verbose
     - name: Run tests for LSP server
       run: cargo test --verbose
+  check-client:
+    name: Check LSP client
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Setup Node
+        uses: actions/setup-node@v3
+      - name: Install Dependencies
+        run: npm install
+      - name: Compile Client
+        run: npm run compile
   compile-server:
     name: Compile-server
     needs: [check-server]
