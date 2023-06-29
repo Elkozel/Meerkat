@@ -1,0 +1,40 @@
+name: Compile and run tests
+
+on:
+  push:
+    branches-ignore:
+      - main
+  pull_request:
+  workflow_dispatch:
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  check-rust:
+    name: Check LSP server
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    - name: Build LSP server
+      run: cargo build --verbose
+    - name: Check LSP server
+      run: cargo check --verbose
+    - name: Run tests for LSP server
+      run: cargo test --verbose
+  check-client:
+    name: Check LSP client
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: [14.x, 16.x, 18.x, 20.x]
+    steps:
+      - uses: actions/checkout@v3
+      - name: Use Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v3
+        with:
+          node-version: ${{ matrix.node-version }}
+      - name: Install Dependencies
+        run: npm install
+      - name: Compile Client
+        run: npm run compile
