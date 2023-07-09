@@ -32,7 +32,7 @@ export function activate(context: ExtensionContext) {
 	});
 	// Register the comands for the tree view
 	commands.registerCommand("meerkat.pcaps.addFile", (uri?: Uri) => treeDataProvider.addFile(uri));
-	commands.registerCommand("meerkat.pcaps.execute", (file: PcapFile) => { executeSuricata(file.filepath) });
+	commands.registerCommand("meerkat.pcaps.execute", (file: PcapFile) => { executeSuricata(file.resourceUri) });
 	commands.registerCommand("meerkat.pcaps.refresh", () => treeDataProvider.refresh());
 	commands.registerCommand("meerkat.pcaps.remove", (file: PcapFile) => { treeDataProvider.remove(file) });
 	commands.registerCommand("meerkat.pcaps.addFolder", (uri: Uri) => treeDataProvider.addFolder(uri));

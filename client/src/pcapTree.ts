@@ -2,46 +2,67 @@ import * as vscode from 'vscode';
 import * as fs from 'fs';
 import path = require('path');
 
+/**
+ * Each item in the tree has a unique ID, which is incremented for each addition
+ */
+var ID = 0;
+/**
+ * Represent a pcap file into the tree view
+ */
 export class PcapFile extends vscode.TreeItem {
-	filepath: vscode.Uri;
 	iconPath = vscode.ThemeIcon.File;
 	contextValue = "pcapFile";
 
+	/**
+	 * Construct a representation of a pcap file
+	 * @param filepath the filepath of the pcap file
+	 */
 	constructor(filepath: vscode.Uri) {
-		let filename = path.basename(filepath.fsPath);
-		super(filename, vscode.TreeItemCollapsibleState.None);
-		this.filepath = filepath;
+		super(filepath, vscode.TreeItemCollapsibleState.None);
+		this.id = (ID++).toString();
 	}
 
+	/**
+	 * A dummy function, does not do anything
+	 */
 	refresh() { }
 
+	/**
+	 * A dummy function, does not do anything
+	 */
 	remove(file: PcapFile) { }
 }
 
+/**
+ * Represent a folder into the tree view
+ */
 export class PcapFolder extends vscode.TreeItem {
-	filepath: vscode.Uri;
 	pcapFiles: Map<string, PcapTreeItem>;
 	iconPath = vscode.ThemeIcon.Folder;
 	contextValue = "pcapFolder";
 
 	constructor(filepath: vscode.Uri) {
-		super(filepath.fsPath, vscode.TreeItemCollapsibleState.Collapsed);
-		this.filepath = filepath;
+		super(filepath, vscode.TreeItemCollapsibleState.Collapsed);
+		this.id = (ID++).toString();
 		this.refresh();
 	}
 
 	/**
-	 * Refresh the contents of the folder
+	 * Refresh the contents of the folder to find new pcap files
 	 */
 	refresh() {
 		this.pcapFiles = new Map();
-		getPcaps(this.filepath).forEach(file => {
-			this.pcapFiles.set(this.filepath.fsPath, file);
+		getPcaps(this.resourceUri).forEach(file => {
+			this.pcapFiles.set(this.resourceUri.fsPath, file);
 		});
 	}
 
+	/**
+	 * Removes a pcap file from the folder. This does not delete the actual pcap file on the disk
+	 * @param file the pcap file to be removed
+	 */
 	remove(file: PcapFile) {
-		this.pcapFiles.delete(file.filepath.fsPath);
+		this.pcapFiles.delete(file.resourceUri.fsPath);
 	}
 }
 
@@ -134,7 +155,7 @@ export class PcapProvider implements vscode.TreeDataProvider<PcapTreeItem> {
 	 * @returns true, if the arrays contain such a filepath
 	 */
 	contains(filepath: vscode.Uri): boolean {
-		return this.pcapFiles.find(pcap => pcap.filepath.fsPath === filepath.fsPath) !== undefined;
+		return this.pcapFiles.find(pcap => pcap.resourceUri.fsPath === filepath.fsPath) !== undefined;
 	}
 
 	/**
@@ -145,7 +166,7 @@ export class PcapProvider implements vscode.TreeDataProvider<PcapTreeItem> {
 		// Remove filepath if it is inside a folder
 		this.pcapFiles.forEach(folder => folder.remove(filepath));
 		// Remove filepath if it is a single file
-		this.pcapFiles = this.pcapFiles.filter(file => file.filepath.fsPath !== filepath.filepath.fsPath);
+		this.pcapFiles = this.pcapFiles.filter(file => file.resourceUri.fsPath !== filepath.resourceUri.fsPath);
 		this.refresh();
 	}
 
