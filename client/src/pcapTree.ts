@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import * as fs from 'fs';
 import path = require('path');
+import { executeSuricata } from './suricata';
 
 /**
  * Each item in the tree has a unique ID, which is incremented for each addition
@@ -68,11 +69,20 @@ export class PcapFolder extends vscode.TreeItem {
 
 type PcapTreeItem = PcapFile | PcapFolder;
 
-export class PcapProvider implements vscode.TreeDataProvider<PcapTreeItem> {
+export class PcapProvider implements vscode.TreeDataProvider<PcapTreeItem>, vscode.TreeDragAndDropController<PcapTreeItem> {
 	pcapFiles: PcapTreeItem[];
 	private _onDidChangeTreeData: vscode.EventEmitter<void | PcapFile | PcapFile[]> = new vscode.EventEmitter<void | PcapFile | PcapFile[]>();
 
-	constructor() {
+	constructor(context: vscode.ExtensionContext) {
+		// Register the tree view
+		const view = vscode.window.createTreeView('pcaps', { treeDataProvider: this, showCollapseAll: true, dragAndDropController: this });
+		context.subscriptions.push(view);
+		// Register the comands for the tree view
+		vscode.commands.registerCommand("meerkat.pcaps.addFile", (uri?: vscode.Uri) => this.addFile(uri));
+		vscode.commands.registerCommand("meerkat.pcaps.execute", (file: PcapFile) => { executeSuricata(file.resourceUri) });
+		vscode.commands.registerCommand("meerkat.pcaps.refresh", () => this.refresh());
+		vscode.commands.registerCommand("meerkat.pcaps.remove", (file: PcapFile) => { this.remove(file) });
+		vscode.commands.registerCommand("meerkat.pcaps.addFolder", (uri: vscode.Uri) => this.addFolder(uri));
 		// Initialize the storage
 		this.pcapFiles = [];
 		this.refresh();
@@ -190,9 +200,31 @@ export class PcapProvider implements vscode.TreeDataProvider<PcapTreeItem> {
 			return [];
 		}
 	}
+
+
+	/**
+	 * Drag and drop controller
+	 */
+	dragMimeTypes = ['application/files', 'text/uri-list'];
+	dropMimeTypes = ['application/vnd.code.tree.pcaps', 'application/files'];
+	handleDrag(source: readonly PcapTreeItem[], dataTransfer: vscode.DataTransfer, token: vscode.CancellationToken) {
+		dataTransfer.set('application/vnd.code.tree.pcaps', new vscode.DataTransferItem(source));
+	}
+	handleDrop?(target: PcapTreeItem | undefined, sources: vscode.DataTransfer, token: vscode.CancellationToken) {
+		const transferItem = sources.get('application/vnd.code.tree.pcaps');
+		if (!transferItem) {
+			return;
+		}
+		const treeItems: PcapTreeItem[] = transferItem.value;
+		let dropTarget = target ?? this.pcapFiles;
+	}
 }
 
-
+/**
+ * Searches for pcap files inside a folder. The search is basic and only looks at the file extenssion
+ * @param rootPath the root path to look for pcaps
+ * @returns the pcap files, which were found
+ */
 function getPcaps(rootPath: vscode.Uri): PcapFile[] {
 	let pcapFileNames = fs.readdirSync(rootPath.fsPath).filter(file => {
 		return file.endsWith(".pcap");

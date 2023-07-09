@@ -1,6 +1,5 @@
-import { StatusBarAlignment, StatusBarItem, ThemeColor, window } from 'vscode';
+import { ExtensionContext, StatusBarAlignment, StatusBarItem, ThemeColor, commands, window } from 'vscode';
 import { getSuricataInfo, SuricataInfo } from './suricata';
-import { Command } from 'vscode-languageclient';
 
 
 
@@ -11,7 +10,7 @@ export class SuricataStatusBar {
 
 	constructor() {
 		this.statusBarItem = window.createStatusBarItem(StatusBarAlignment.Left, 10);
-		this.statusBarItem.command = "meerkat.status.refresh";
+		commands.registerCommand("meerkat.status.refresh", () => this.refresh())
 		this.refresh();
 	}
 

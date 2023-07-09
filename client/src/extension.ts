@@ -26,19 +26,9 @@ export function activate(context: ExtensionContext) {
 	});
 
 	// Register the tree view
-	const treeDataProvider = new PcapProvider();
-	window.createTreeView("pcaps", {
-		treeDataProvider: treeDataProvider
-	});
-	// Register the comands for the tree view
-	commands.registerCommand("meerkat.pcaps.addFile", (uri?: Uri) => treeDataProvider.addFile(uri));
-	commands.registerCommand("meerkat.pcaps.execute", (file: PcapFile) => { executeSuricata(file.resourceUri) });
-	commands.registerCommand("meerkat.pcaps.refresh", () => treeDataProvider.refresh());
-	commands.registerCommand("meerkat.pcaps.remove", (file: PcapFile) => { treeDataProvider.remove(file) });
-	commands.registerCommand("meerkat.pcaps.addFolder", (uri: Uri) => treeDataProvider.addFolder(uri));
+	new PcapProvider(context);
 	// Register the staus bar
-	const suricataStatusBar = new SuricataStatusBar();
-	commands.registerCommand("meerkat.status.refresh", () => suricataStatusBar.refresh())
+	new SuricataStatusBar();
 	// Register execute suricata command
 	const executeSuricataCommand = commands.registerCommand("meerkat.executeSuricata", (uri: Uri) => executeSuricata(uri));
 	context.subscriptions.push(executeSuricataCommand, hello);
