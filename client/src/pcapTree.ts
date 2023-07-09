@@ -24,6 +24,18 @@ export class PcapFile extends vscode.TreeItem {
 	}
 
 	/**
+	 * Open the pcap file in the editor
+	 */
+	async open() {
+		try {
+			await vscode.window.showTextDocument(this.resourceUri);
+		}
+		catch (err) {
+			vscode.window.showErrorMessage(`Please make sure that an extenssion, which can render PCAP files is installed and activated (Error: ${err.toString()})`);
+		}
+	}
+
+	/**
 	 * A dummy function, does not do anything
 	 */
 	refresh() { }
@@ -83,6 +95,7 @@ export class PcapProvider implements vscode.TreeDataProvider<PcapTreeItem>, vsco
 		vscode.commands.registerCommand("meerkat.pcaps.refresh", () => this.refresh());
 		vscode.commands.registerCommand("meerkat.pcaps.remove", (file: PcapFile) => { this.remove(file) });
 		vscode.commands.registerCommand("meerkat.pcaps.addFolder", (uri: vscode.Uri) => this.addFolder(uri));
+		vscode.commands.registerCommand("meerkat.pcaps.previewPcap", (file: PcapFile) => file.open());
 		// Initialize the storage
 		this.pcapFiles = [];
 		this.refresh();
@@ -245,11 +258,11 @@ export class PcapProvider implements vscode.TreeDataProvider<PcapTreeItem>, vsco
 				}
 				else {
 					// Check if the Uri is pointing to a folder or a file
-					if(fs.statSync(uriItem.fsPath).isDirectory()) {
+					if (fs.statSync(uriItem.fsPath).isDirectory()) {
 						this.pcapFiles.push(new PcapFolder(uriItem));
 
 					}
-					else if(uriItem.fsPath.endsWith(".pcap")) {
+					else if (uriItem.fsPath.endsWith(".pcap")) {
 						this.pcapFiles.push(new PcapFile(uriItem));
 					} else {
 						vscode.window.showErrorMessage(`File ${uriItem.fsPath} could not be added as it is not a pcap file or a folder`);

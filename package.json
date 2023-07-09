@@ -66,6 +66,11 @@
 				"icon": "$(refresh)"
 			},
 			{
+				"title": "Open PCAP File in preview",
+				"command": "meerkat.pcaps.previewPcap",
+				"icon": "$(preview)"
+			},
+			{
 				"title": "Refresh Suricata status",
 				"command": "meerkat.status.refresh",
 				"icon": "$(refresh)"
@@ -115,6 +120,11 @@
 			"view/item/context": [
 				{
 					"command": "meerkat.pcaps.execute",
+					"when": "view == pcaps && viewItem == pcapFile",
+					"group": "inline"
+				},
+				{
+					"command": "meerkat.pcaps.previewPcap",
 					"when": "view == pcaps && viewItem == pcapFile",
 					"group": "inline"
 				},
