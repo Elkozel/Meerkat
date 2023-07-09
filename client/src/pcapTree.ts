@@ -205,18 +205,60 @@ export class PcapProvider implements vscode.TreeDataProvider<PcapTreeItem>, vsco
 	/**
 	 * Drag and drop controller
 	 */
-	dragMimeTypes = ['application/files', 'text/uri-list'];
-	dropMimeTypes = ['application/vnd.code.tree.pcaps', 'application/files'];
+	dragMimeTypes = ['application/vnd.code.tree.pcaps', "text/uri-list"];
+	dropMimeTypes = ['application/vnd.code.tree.pcaps', "text/uri-list"];
 	handleDrag(source: readonly PcapTreeItem[], dataTransfer: vscode.DataTransfer, token: vscode.CancellationToken) {
 		dataTransfer.set('application/vnd.code.tree.pcaps', new vscode.DataTransferItem(source));
+		dataTransfer.set("text/uri-list", new vscode.DataTransferItem(source.map(item => item.resourceUri)));
 	}
-	handleDrop?(target: PcapTreeItem | undefined, sources: vscode.DataTransfer, token: vscode.CancellationToken) {
-		const transferItem = sources.get('application/vnd.code.tree.pcaps');
-		if (!transferItem) {
-			return;
+	handleDrop(target: PcapTreeItem, sources: vscode.DataTransfer, token: vscode.CancellationToken) {
+		// Fetch all tree items
+		let TreeItems = sources.get('application/vnd.code.tree.pcaps');
+		// If there are tree items, add them to the target
+		if (TreeItems) {
+			const items: PcapTreeItem[] = TreeItems.value;
+
+			items.forEach(treeItem => {
+				// For now you can only add items to the root element (aka when target it undefined)
+				if (target) {
+					return;
+				}
+				else {
+					this.pcapFiles.push(treeItem);
+				}
+			})
 		}
-		const treeItems: PcapTreeItem[] = transferItem.value;
-		let dropTarget = target ?? this.pcapFiles;
+
+		// Fetch all files
+		let urlList = sources.get('text/uri-list');
+		// If there are files, add them to the target
+		if (urlList) {
+			// First extract the string
+			const urlListString: string = urlList.value;
+			// The individual paths are all represented in a string, separated by `\r\n`. For example "Path\\1\r\nPath\\2"
+			const items: vscode.Uri[] = urlListString.split("\r\n").map(uriString => vscode.Uri.parse(uriString));
+
+			items.forEach(uriItem => {
+				// For now you can only add items to the root element (aka when target it undefined)
+				if (target) {
+					return;
+				}
+				else {
+					// Check if the Uri is pointing to a folder or a file
+					if(fs.statSync(uriItem.fsPath).isDirectory()) {
+						this.pcapFiles.push(new PcapFolder(uriItem));
+
+					}
+					else if(uriItem.fsPath.endsWith(".pcap")) {
+						this.pcapFiles.push(new PcapFile(uriItem));
+					} else {
+						vscode.window.showErrorMessage(`File ${uriItem.fsPath} could not be added as it is not a pcap file or a folder`);
+					}
+				}
+			})
+
+		}
+		this.refresh();
 	}
 }
 
