@@ -9,25 +9,67 @@ export class SuricataStatusBar {
 	suricataInfo: SuricataInfo;
 
 	constructor() {
-		this.statusBarItem = window.createStatusBarItem(StatusBarAlignment.Left, 10);
+		this.statusBarItem = window.createStatusBarItem("Suricata status", StatusBarAlignment.Left, 10);
 		commands.registerCommand("meerkat.status.refresh", () => this.refresh())
 		this.refresh();
 	}
 
 	async refresh() {
+		// Show the user information about the refresh
+		this._statusLoading("$(loading) Searching for suricata","");
+		// Refresh the suricata information we have
 		this.suricataInfo = await getSuricataInfo();
+		// If information is null, suricata is not installed
 		if (this.suricataInfo == null) {
-			this.statusBarItem.backgroundColor = new ThemeColor('statusBarItem.errorBackground');
-			this.statusBarItem.text = "$(circle-slash) Suricata not found";
-			this.statusBarItem.tooltip = "Suricata process was not found inside the Path variable. \n Click to refresh";
+			// Tell that to the user
+			const text = `$(circle-slash) Suricata not found`;
+			const tooltip = `Suricata process was not found. Please make sure that suricata is inside the path variable. \n` +
+				`Click to refresh`;
+			this._statusError(text, tooltip);
 		}
+		// Else suricata is installed on the system
 		else {
-			this.statusBarItem.backgroundColor = undefined;
-			this.statusBarItem.text = `$(check) Suricata version ${this.suricataInfo.version}`;
-			this.statusBarItem.tooltip = `Suricata version ${this.suricataInfo.version} found.\n`;
-			this.statusBarItem.tooltip = `Running as a service: ${this.suricataInfo.asService ? "yes" : "no"} \n`;
-			this.statusBarItem.tooltip = `Click to refresh`;
+			// Present the info found to the user
+			const text = `$(check) Suricata version ${this.suricataInfo.version}`;
+			const tooltip = `Suricata version ${this.suricataInfo.version} found.\n` +
+				`Running as a service: ${this.suricataInfo.asService ? "yes" : "no"} \n` +
+				`Click to refresh`;
+			this._statusNeutral(text, tooltip);
 		}
+		// Show the status bar
 		this.statusBarItem.show();
+	}
+
+	/**
+	 * Changes the status bar to show an error
+	 * @param text The text to be displayed on the status bar
+	 * @param tooltip The text to be displayed when the user hovers
+	 */
+	_statusError(text: string, tooltip: string) {
+		this.statusBarItem.backgroundColor = new ThemeColor('statusBarItem.errorBackground');
+		this.statusBarItem.text = text;
+		this.statusBarItem.tooltip = tooltip;
+	}
+
+	/**
+	 * Changes the status bar to appear neutral (with the theme of the editor)
+	 * @param text The text to be displayed on the status bar
+	 * @param tooltip The text to be displayed when the user hovers
+	 */
+	_statusNeutral(text: string, tooltip: string) {
+		this.statusBarItem.backgroundColor = undefined;
+		this.statusBarItem.text = text;
+		this.statusBarItem.tooltip = tooltip;
+	}
+
+	/**
+	 * Changes the status bar to appear as if it is loading
+	 * @param text The text to be displayed on the status bar
+	 * @param tooltip The text to be displayed when the user hovers
+	 */
+	_statusLoading(text: string, tooltip: string) {
+		this.statusBarItem.backgroundColor = undefined;
+		this.statusBarItem.text = text;
+		this.statusBarItem.tooltip = tooltip;
 	}
 }

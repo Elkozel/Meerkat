@@ -31,7 +31,7 @@ export class PcapFile extends vscode.TreeItem {
 			await vscode.window.showTextDocument(this.resourceUri);
 		}
 		catch (err) {
-			vscode.window.showErrorMessage(`Please make sure that an extenssion, which can render PCAP files is installed and activated (Error: ${err.toString()})`);
+			vscode.window.showErrorMessage(`Please make sure that an extenssion, which can render PCAP files is installed and activated (${err.toString()})`);
 		}
 	}
 
