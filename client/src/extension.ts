@@ -30,10 +30,10 @@ export function activate(context: ExtensionContext) {
 		command,
 		options: {
 			env: {
-				...process.env, 
+				...process.env,
 				// eslint-disable-next-line @typescript-eslint/naming-convention
-				RUST_BACKTRACE: "1",
-				RUST_LOG: "debug"
+				RUST_BACKTRACE: process.env.SERVER_DEBUG || "0",
+				RUST_LOG: process.env.SERVER_LOG || "warn"
 			},
 		},
 	};
