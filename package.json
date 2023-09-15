@@ -7,6 +7,9 @@
 	"repository": "https://github.com/Elkozel/Meerkat.git",
 	"license": "MIT",
 	"version": "0.5.0",
+	"categories": [
+		"Snippets", "Formatters"
+	],
 	"keywords": [
 		"lsp",
 		"vscode extenssion",
@@ -159,6 +162,12 @@
 					"rules"
 				],
 				"configuration": "./language-configuration.json"
+			}
+		],
+		"snippets": [
+			{
+				"language": "suricata",
+				"path": "./snippets.json"
 			}
 		]
 	},

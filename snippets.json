@@ -1,0 +1,26 @@
+{
+	"TCP Rule": {
+		"scope": "suricata",
+		"prefix": "alert tcp",
+		"body": "alert tcp $1 $2 -> $3 $4 (msg: \"$5\"; sid: 1;)",
+		"description": "Create a tcp rule"
+	},
+	"HTTP Rule": {
+		"scope": "suricata",
+		"prefix": "alert http",
+		"body": "alert http $1 any -> $3 80 (msg: \"$5\"; sid: 1;)",
+		"description": "Create a http rule"
+	},
+	"UDP Rule": {
+		"scope": "suricata",
+		"prefix": "alert udp",
+		"body": "alert udp $1 $2 -> $3 $4 (msg: \"$5\"; sid: 1;)",
+		"description": "Create a udp rule"
+	},
+	"DNS Rule": {
+		"scope": "suricata",
+		"prefix": "alert dns",
+		"body": "alert dns $1 any -> $3 53 (msg: \"$5\"; content:\"$6\"; dns.query; sid: 1;)",
+		"description": "Create a udp rule"
+	}
+}
