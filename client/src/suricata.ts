@@ -3,7 +3,8 @@ import { workspace, window, Uri, ViewColumn, TextDocument, StatusBarAlignment, c
 import * as os from "node:os";
 import * as fs from "node:fs";
 import which = require('which');
-const util = require('util');
+import util = require('util');
+// eslint-disable-next-line @typescript-eslint/no-var-requires
 const exec = util.promisify(require('child_process').exec);
 
 const temporaryDirectory = fs.mkdtempSync(path.join(os.tmpdir(), "meerkat"));
@@ -13,7 +14,7 @@ const opt: ProgressOptions = {
 };
 
 
-export function executeSuricata(pcap: Uri, rules?: Uri, removeLogs: boolean = true) {
+export function executeSuricata(pcap: Uri, rules?: Uri, removeLogs = true) {
 	// Return if no active file was found
 	if (window.activeTextEditor === undefined) {
 		window.showErrorMessage("No active rule file is selected, please open a rule file");
@@ -79,6 +80,7 @@ export function executeSuricata(pcap: Uri, rules?: Uri, removeLogs: boolean = tr
 								switch (response) {
 									// Check if the user wants to open the suricata logs
 									case "Open suricata logs":
+										// eslint-disable-next-line no-case-declarations
 										const suricataLog = Uri.parse(path.join("file:\\\\" + temporaryDirectory, "suricata.log"));
 										window.showTextDocument(suricataLog, {
 											"preserveFocus": false,
@@ -100,9 +102,9 @@ export function executeSuricata(pcap: Uri, rules?: Uri, removeLogs: boolean = tr
 				}
 			});
 
-		})
+		});
 		return waitForTerminal;
-	})
+	});
 }
 
 
@@ -130,24 +132,24 @@ export interface SuricataInfo {
 }
 export async function getSuricataInfo(): Promise<SuricataInfo | null> {
 	try {
-		which.sync('suricata') // see if suricata is installed
+		which.sync('suricata'); // see if suricata is installed
 		const { stdout, stderr } = await exec("suricata -V");
 		/*
 			18/5/2023 -- 22:36:55 - <Info> - Running as service: no 
 			This is Suricata version 6.0.9 RELEASE
 		*/
-		let commandLines: string[] = stdout.split('\n');
+		const commandLines: string[] = stdout.split('\n');
 		// Extract the "Running as a service"
 		let position = commandLines[0].indexOf("Running as service:") + "Running as service:".length;
-		let serviceBoolText = commandLines[0].substring(position).trim();
-		let serviceBool = serviceBoolText === "yes" ? true : false;
+		const serviceBoolText = commandLines[0].substring(position).trim();
+		const serviceBool = serviceBoolText === "yes" ? true : false;
 		// Extract the version of suricata
 		position = commandLines[1].indexOf("Suricata version") + "Suricata version".length;
-		let suricataVersion = commandLines[1].substring(position).trim();
+		const suricataVersion = commandLines[1].substring(position).trim();
 		return {
 			"asService": serviceBool,
 			"version": suricataVersion
-		}
+		};
 	}
 	catch (err) {
 		console.log(`Checking suricata produced the following error: ${err}`);

@@ -10,7 +10,7 @@ export class SuricataStatusBar {
 
 	constructor() {
 		this.statusBarItem = window.createStatusBarItem("Suricata status", StatusBarAlignment.Left, 10);
-		commands.registerCommand("meerkat.status.refresh", () => this.refresh())
+		commands.registerCommand("meerkat.status.refresh", () => this.refresh());
 		this.refresh();
 	}
 
