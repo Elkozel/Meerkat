@@ -23,7 +23,7 @@ Meerkat provides the following features:
 ![Code completion example](./media/suggestion.gif)
 
 ### Code snipplets
-![Code completion example](./media/suggestion.gif)
+![Code completion example](./media/snippets.gif)
 
 ### PCAP Testing
 ![Code completion example](./media/open_and_execute.gif)
