@@ -17,10 +17,10 @@ use chumsky::{
 use csv::ReaderBuilder;
 use ropey::Rope;
 use serde::Deserialize;
-use tokio::process::Command;
+use std::path::Path;
 use std::{collections::HashMap, error::Error};
-use std::{path::Path};
 use tempfile::{tempdir, NamedTempFile};
+use tokio::process::Command;
 use tower_lsp::lsp_types::{Diagnostic, DiagnosticSeverity, Position, Range};
 
 /// Verify a list of rules
@@ -106,7 +106,8 @@ async fn get_process_output(rule_file: &Path, log_path: &Path) -> Result<String,
             log_path.display().to_string().as_str(),
             "--engine-analysis",
         ])
-        .output().await?;
+        .output()
+        .await?;
 
     // Get the output from the command
     let log_file = String::from_utf8(suricata_process.stderr)?;
@@ -147,7 +148,8 @@ pub async fn get_keywords() -> Result<HashMap<String, Keyword>, Box<dyn Error>> 
     // -r pcap offline mode
     let keywords_command = Command::new("suricata")
         .arg("--list-keywords=csv")
-        .output().await?;
+        .output()
+        .await?;
 
     // Get the output from the command
     let mut log_file = String::from_utf8(keywords_command.stdout)?;
@@ -223,10 +225,13 @@ impl LogMessage {
             .then_ignore(just("--"))
             .then(time.padded())
             .map(|(date, time)| {
-                let datetime = NaiveDate::from_ymd(date[2].try_into().unwrap(), date[1], date[0])
-                    .and_hms(time[0], time[1], time[2]);
                 let offset = Local::now().offset().to_owned();
-                DateTime::<FixedOffset>::from_local(datetime, offset)
+                let datetime =
+                    NaiveDate::from_ymd_opt(date[2].try_into().unwrap(), date[1], date[0])
+                        .and_then(|a| a.and_hms_opt(time[0], time[1], time[2]))
+                        .and_then(|a| Some(a.and_local_timezone(offset)))
+                        .unwrap();
+                datetime.earliest().unwrap()
             });
 
         let log_level = text::ident::<_, Simple<char>>()

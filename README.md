@@ -7,20 +7,30 @@ Meerkat provides the following features:
 - Syntax highlighting
 ### Signature checking with suricata
 ![Signature checking example](./media/Errors.gif)
+
 ### Signature formatting
 ![Signature formatting example](./media/auto-format.gif)
 *The Auto-formatting uses the default hotkeys in your code editor*
+
 ### Hover information
 ![Hover information example](./media/hover.gif)
+
 ### Variable references/renaiming
 ![Variable renaiming example](./media/rename.gif)
 *The rename feature uses the default hotkeys in your code editor*
+
 ### Code completion
 ![Code completion example](./media/suggestion.gif)
-- Rule performance statistics (TODO)
-- Code snipplets (TOOD)
+
+### Code snipplets
+![Code completion example](./media/snippets.gif)
+
+### PCAP Testing
+![Code completion example](./media/open_and_execute.gif)
+**!Warning:** pcap visualization only works if additional third party extenssions are installed. Please install one of the available extenssions to be able to open pcap files in VS Code.
+
 - Rule linting (TOOD)
-- PCAP Testing (TODO)
+- Rule performance statistics (TODO)
 
 ## Structure
 Meerkat consists of three parts:

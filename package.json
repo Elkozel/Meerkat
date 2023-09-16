@@ -6,7 +6,11 @@
 	"publisher": "ELKozel",
 	"repository": "https://github.com/Elkozel/Meerkat.git",
 	"license": "MIT",
-	"version": "0.5.0",
+	"version": "1.0.0",
+	"categories": [
+		"Snippets",
+		"Formatters"
+	],
 	"keywords": [
 		"lsp",
 		"vscode extenssion",
@@ -18,21 +22,141 @@
 	},
 	"activationEvents": [
 		"onLanguage:suricata",
-		"onCommand:meerkat.hello"
+		"onCommand:meerkat.hello",
+		"onCommand:meerkat.executeSuricata",
+		"onView:pcaps"
 	],
 	"main": "./client/out/extension",
 	"contributes": {
 		"configuration": {
 			"title": "Meerkat",
-			"properties": {}
+			"properties": {
+				"meerkat.ignoreSuricataErrors": {
+					"type": "boolean",
+					"default": false,
+					"description": "Do not display error messages when suricata exits with an error code"
+				}
+			}
 		},
 		"commands": [
 			{
 				"title": "Say \"hello\" to Meerkat",
 				"command": "meerkat.hello",
 				"shortTitle": "Meerkat: Hello world!"
+			},
+			{
+				"title": "Execute Suricata on a PCAP file",
+				"command": "meerkat.pcaps.execute",
+				"icon": "$(play)"
+			},
+			{
+				"title": "Remove a PCAP file",
+				"command": "meerkat.pcaps.remove",
+				"icon": "$(remove)"
+			},
+			{
+				"title": "Add a PCAP Directory",
+				"command": "meerkat.pcaps.addFolder",
+				"icon": "$(new-folder)"
+			},
+			{
+				"title": "Add a PCAP file",
+				"command": "meerkat.pcaps.addFile",
+				"icon": "$(file-add)"
+			},
+			{
+				"title": "Refresh PCAP Files",
+				"command": "meerkat.pcaps.refresh",
+				"icon": "$(refresh)"
+			},
+			{
+				"title": "Open PCAP File in preview",
+				"command": "meerkat.pcaps.previewPcap",
+				"icon": "$(preview)"
+			},
+			{
+				"title": "Refresh Suricata status",
+				"command": "meerkat.status.refresh",
+				"icon": "$(refresh)"
 			}
 		],
+		"viewsContainers": {
+			"activitybar": [
+				{
+					"id": "meerkat",
+					"title": "Meerkat",
+					"icon": "resources/meerkat.svg"
+				}
+			]
+		},
+		"views": {
+			"meerkat": [
+				{
+					"id": "pcaps",
+					"name": "PCAP Files"
+				},
+				{
+					"id": "variables",
+					"name": "Variables"
+				}
+			]
+		},
+		"viewsWelcome": [
+			{
+				"view": "pcaps",
+				"contents": "You have not added any files:\n[Add a PCAP file](command:meerkat.pcaps.addFile)\n[Add a folder](command:meerkat.pcaps.addFolder)"
+			}
+		],
+		"menus": {
+			"view/title": [
+				{
+					"command": "meerkat.pcaps.addFolder",
+					"when": "view == pcaps",
+					"group": "navigation@1"
+				},
+				{
+					"command": "meerkat.pcaps.addFile",
+					"when": "view == pcaps",
+					"group": "navigation@2"
+				},
+				{
+					"command": "meerkat.pcaps.refresh",
+					"when": "view == pcaps",
+					"group": "navigation@3"
+				}
+			],
+			"view/item/context": [
+				{
+					"command": "meerkat.pcaps.execute",
+					"when": "view == pcaps && viewItem == pcapFile",
+					"group": "inline"
+				},
+				{
+					"command": "meerkat.pcaps.previewPcap",
+					"when": "view == pcaps && viewItem == pcapFile",
+					"group": "inline"
+				},
+				{
+					"command": "meerkat.pcaps.remove",
+					"when": "view == pcaps",
+					"group": "inline"
+				}
+			],
+			"explorer/context": [
+				{
+					"command": "meerkat.pcaps.execute",
+					"group": "1_modification"
+				},
+				{
+					"command": "meerkat.pcaps.addFile",
+					"group": "1_modification"
+				},
+				{
+					"command": "meerkat.pcaps.addFolder",
+					"group": "1_modification"
+				}
+			]
+		},
 		"languages": [
 			{
 				"id": "suricata",
@@ -43,6 +167,12 @@
 					"rules"
 				],
 				"configuration": "./language-configuration.json"
+			}
+		],
+		"snippets": [
+			{
+				"language": "suricata",
+				"path": "./snippets.json"
 			}
 		]
 	},
@@ -57,14 +187,14 @@
 		"cargo-install": "cargo build"
 	},
 	"devDependencies": {
-		"@types/mocha": "^9.1.0",
-		"@types/node": "^16.11.7",
-		"@types/vscode": "^1.71.0",
-		"@typescript-eslint/eslint-plugin": "^5.30.0",
-		"@typescript-eslint/parser": "^5.30.0",
-		"eslint": "^8.13.0",
-		"mocha": "^9.2.1",
-		"typescript": "^4.8.4",
-		"vsce": "^2.14.0"
+		"@types/mocha": "^9.1.1",
+		"@types/node": "^16.18.52",
+		"@types/vscode": "^1.82.0",
+		"@typescript-eslint/eslint-plugin": "^5.62.0",
+		"@typescript-eslint/parser": "^5.62.0",
+		"@vscode/vsce": "^2.21.0",
+		"eslint": "^8.49.0",
+		"mocha": "^9.2.2",
+		"typescript": "^5.2.2"
 	}
 }

@@ -1,0 +1,85 @@
+name: Deploying extenssion
+
+on:
+  push:
+    branches: [ "main" ]
+  workflow_dispatch:
+
+jobs:
+  check-server:
+    name: Check LSP server
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    - name: Build LSP server
+      run: cargo build --verbose
+    - name: Check LSP server
+      run: cargo check --verbose
+    - name: Run tests for LSP server
+      run: cargo test --verbose
+  check-client:
+    name: Check LSP client
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Setup Node
+        uses: actions/setup-node@v3
+      - name: Install Dependencies
+        run: npm install
+      - name: Compile Client
+        run: npm run compile
+  compile-server:
+    name: Compile-server
+    needs: [check-server]
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        target:
+          - x86_64-pc-windows-gnu
+          - x86_64-unknown-linux-gnu
+    steps:
+      - uses: actions/checkout@v3
+      - name: Installing Toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          target: ${{ matrix.target }}
+          override: true
+      - name: Compiling for ${{ matrix.target }}
+        uses: actions-rs/cargo@v1
+        with:
+          use-cross: true
+          command: build
+          args: --release --target=${{ matrix.target }}
+      - name: Uploading artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: server
+          path: target/${{ matrix.target }}/release/meerkat*
+  compile-client:
+    name: Deploy-extenssion
+    needs: [compile-server, check-client]
+    runs-on: ubuntu-latest
+    steps: 
+      - uses: actions/checkout@v3
+      - name: Show folders
+        run: ls -R
+      - name: Installing NPM
+        run: npm install
+      - name: Downloading server
+        uses: actions/download-artifact@v3
+        with: 
+          name: server
+          path: server/
+      - name: Packaging extenssion
+        run: npx vsce package
+      - name: Uploading artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: extenssion
+          path: ./*.vsix 
+      - name: Deploying extenssion
+        run: npx vsce publish --pat ${{ secrets.MARKETPLACE_DEPLOY_TOKEN }} --target win32-x64 linux-x64
+
+
+  

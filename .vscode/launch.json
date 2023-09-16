@@ -12,6 +12,11 @@
 			"preLaunchTask": {
 				"type": "npm",
 				"script": "watch"
+			},
+			"env": {
+				"SERVER_PATH": "../../target/debug/meerkat",
+				"SERVER_DEBUG": "1",
+				"SERVER_LOG": "debug"
 			}
 		},
 		{

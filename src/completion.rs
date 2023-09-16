@@ -5,7 +5,7 @@
 use std::collections::{HashMap, HashSet};
 
 use ropey::RopeSlice;
-use tower_lsp::lsp_types::{CompletionItem, CompletionItemKind};
+use tower_lsp::lsp_types::{CompletionItem, CompletionItemKind, InsertTextFormat};
 
 use crate::{
     rule::{
@@ -116,7 +116,8 @@ pub fn get_completion_for_option_keywords(
         }),
         Keyword::Other(record) => completion_tokens.push(CompletionItem {
             label: record.name.clone(),
-            insert_text: Some(format!("{}: ", record.name.clone())),
+            insert_text: Some(format!("{}: $1;", record.name.clone())),
+            insert_text_format: Some(InsertTextFormat::SNIPPET),
             kind: Some(CompletionItemKind::KEYWORD),
             detail: Some(record.description.clone()),
             ..Default::default()
