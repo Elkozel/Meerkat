@@ -27,7 +27,8 @@ Meerkat provides the following features:
 
 ### PCAP Testing
 ![Code completion example](./media/open_and_execute.gif)
-**!Warning:** pcap visualization only works if additional third party extenssions are installed. Please install one of the available extenssions to be able to open pcap files in VS Code.
+
+**Warning:** pcap visualization only works if additional third party extenssions are installed. Please install one of the available extenssions to be able to open pcap files in VS Code.
 
 - Rule linting (TOOD)
 - Rule performance statistics (TODO)

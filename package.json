@@ -189,7 +189,7 @@
 	"devDependencies": {
 		"@types/mocha": "^9.1.1",
 		"@types/node": "^16.18.52",
-		"@types/vscode": "^1.82.0",
+		"@types/vscode": "^1.71.0",
 		"@typescript-eslint/eslint-plugin": "^5.62.0",
 		"@typescript-eslint/parser": "^5.62.0",
 		"@vscode/vsce": "^2.21.0",
