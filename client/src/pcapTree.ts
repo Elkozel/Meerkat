@@ -4,9 +4,13 @@ import path = require('path');
 import { executeSuricata } from './suricata';
 
 /**
+ * Extenssions for pcap files
+ */
+const PCAP_FILE_EXTENSSIONS = ["pcap", "pcapng", "cap"];
+/**
  * Each item in the tree has a unique ID, which is incremented for each addition
  */
-var ID = 0;
+let ID = 0;
 /**
  * Represent a pcap file into the tree view
  */
@@ -28,7 +32,7 @@ export class PcapFile extends vscode.TreeItem {
 	 */
 	async open() {
 		try {
-			await vscode.window.showTextDocument(this.resourceUri);
+			await vscode.commands.executeCommand('vscode.open', this.resourceUri);
 		}
 		catch (err) {
 			vscode.window.showErrorMessage(`Please make sure that an extenssion, which can render PCAP files is installed and activated (${err.toString()})`);
@@ -38,11 +42,13 @@ export class PcapFile extends vscode.TreeItem {
 	/**
 	 * A dummy function, does not do anything
 	 */
+	// eslint-disable-next-line @typescript-eslint/no-empty-function
 	refresh() { }
 
 	/**
 	 * A dummy function, does not do anything
 	 */
+	// eslint-disable-next-line @typescript-eslint/no-empty-function
 	remove(file: PcapFile) { }
 }
 
@@ -91,9 +97,9 @@ export class PcapProvider implements vscode.TreeDataProvider<PcapTreeItem>, vsco
 		context.subscriptions.push(view);
 		// Register the comands for the tree view
 		vscode.commands.registerCommand("meerkat.pcaps.addFile", (uri?: vscode.Uri) => this.addFile(uri));
-		vscode.commands.registerCommand("meerkat.pcaps.execute", (file: PcapFile) => { executeSuricata(file.resourceUri) });
+		vscode.commands.registerCommand("meerkat.pcaps.execute", (file: PcapFile) => { executeSuricata(file.resourceUri); });
 		vscode.commands.registerCommand("meerkat.pcaps.refresh", () => this.refresh());
-		vscode.commands.registerCommand("meerkat.pcaps.remove", (file: PcapFile) => { this.remove(file) });
+		vscode.commands.registerCommand("meerkat.pcaps.remove", (file: PcapFile) => { this.remove(file); });
 		vscode.commands.registerCommand("meerkat.pcaps.addFolder", (uri: vscode.Uri) => this.addFolder(uri));
 		vscode.commands.registerCommand("meerkat.pcaps.previewPcap", (file: PcapFile) => file.open());
 		// Initialize the storage
@@ -125,11 +131,14 @@ export class PcapProvider implements vscode.TreeDataProvider<PcapTreeItem>, vsco
 			return;
 		}
 		// else the filepath was not specified, so we need to ask the user
-		let userResponse = await vscode.window.showOpenDialog({
+		const userResponse = await vscode.window.showOpenDialog({
 			canSelectMany: true,
 			title: "Please select the pcap files you wish to add",
-			filters: { "Pcap files": ["pcap"] }
-		})
+			filters: {
+				"Pcap files": PCAP_FILE_EXTENSSIONS,
+				"any": ["*"]
+			}
+		});
 		userResponse.forEach(file => {
 			// check if the file is already added
 			if (this.contains(file)) {
@@ -138,7 +147,7 @@ export class PcapProvider implements vscode.TreeDataProvider<PcapTreeItem>, vsco
 			else {
 				this.pcapFiles.push(new PcapFile(file));
 			}
-		})
+		});
 		this.refresh();
 	}
 
@@ -154,12 +163,12 @@ export class PcapProvider implements vscode.TreeDataProvider<PcapTreeItem>, vsco
 			return;
 		}
 		// else the filepath was not specified, so we need to ask the user
-		let userResponse = await vscode.window.showOpenDialog({
+		const userResponse = await vscode.window.showOpenDialog({
 			canSelectMany: false,
 			title: "Please select the folder you wish to add",
 			canSelectFiles: false,
 			canSelectFolders: true
-		})
+		});
 		userResponse.forEach(file => {
 			// check if the file is already added
 			if (this.contains(file)) {
@@ -168,7 +177,7 @@ export class PcapProvider implements vscode.TreeDataProvider<PcapTreeItem>, vsco
 			else {
 				this.pcapFiles.push(new PcapFolder(file));
 			}
-		})
+		});
 		this.refresh();
 	}
 
@@ -226,7 +235,7 @@ export class PcapProvider implements vscode.TreeDataProvider<PcapTreeItem>, vsco
 	}
 	handleDrop(target: PcapTreeItem, sources: vscode.DataTransfer, token: vscode.CancellationToken) {
 		// Fetch all tree items
-		let TreeItems = sources.get('application/vnd.code.tree.pcaps');
+		const TreeItems = sources.get('application/vnd.code.tree.pcaps');
 		// If there are tree items, add them to the target
 		if (TreeItems) {
 			const items: PcapTreeItem[] = TreeItems.value;
@@ -239,17 +248,17 @@ export class PcapProvider implements vscode.TreeDataProvider<PcapTreeItem>, vsco
 				else {
 					this.pcapFiles.push(treeItem);
 				}
-			})
+			});
 		}
 
 		// Fetch all files
-		let urlList = sources.get('text/uri-list');
+		const urlList = sources.get('text/uri-list');
 		// If there are files, add them to the target
 		if (urlList) {
 			// First extract the string
 			const urlListString: string = urlList.value;
 			// The individual paths are all represented in a string, separated by `\r\n`. For example "Path\\1\r\nPath\\2"
-			const items: vscode.Uri[] = urlListString.split("\r\n").map(uriString => vscode.Uri.parse(uriString));
+			const items: vscode.Uri[] = urlListString.split("\r\n").map(uriString => vscode.Uri.parse("file:\\\\" + uriString));
 
 			items.forEach(uriItem => {
 				// For now you can only add items to the root element (aka when target it undefined)
@@ -268,7 +277,7 @@ export class PcapProvider implements vscode.TreeDataProvider<PcapTreeItem>, vsco
 						vscode.window.showErrorMessage(`File ${uriItem.fsPath} could not be added as it is not a pcap file or a folder`);
 					}
 				}
-			})
+			});
 
 		}
 		this.refresh();
@@ -281,8 +290,8 @@ export class PcapProvider implements vscode.TreeDataProvider<PcapTreeItem>, vsco
  * @returns the pcap files, which were found
  */
 function getPcaps(rootPath: vscode.Uri): PcapFile[] {
-	let pcapFileNames = fs.readdirSync(rootPath.fsPath).filter(file => {
-		return file.endsWith(".pcap");
+	const pcapFileNames = fs.readdirSync(rootPath.fsPath).filter(file => {
+		return PCAP_FILE_EXTENSSIONS.some(extenssion => file.endsWith(extenssion));
 	});
-	return pcapFileNames.map(file => new PcapFile(vscode.Uri.parse(path.join(rootPath.fsPath, file))));
+	return pcapFileNames.map(file => new PcapFile(vscode.Uri.parse("file:/" + path.join(rootPath.fsPath, file))));
 }

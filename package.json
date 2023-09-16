@@ -93,13 +93,17 @@
 				{
 					"id": "pcaps",
 					"name": "PCAP Files"
+				},
+				{
+					"id": "variables",
+					"name": "Variables"
 				}
 			]
 		},
 		"viewsWelcome": [
 			{
 				"view": "pcaps",
-				"contents": "No PCAP files added:\n[Add a PCAP file](command:meerkat.pcaps.addFile)\n[Add a folder](command:meerkat.pcaps.addFolder)"
+				"contents": "You have not added any files:\n[Add a PCAP file](command:meerkat.pcaps.addFile)\n[Add a folder](command:meerkat.pcaps.addFolder)"
 			}
 		],
 		"menus": {
