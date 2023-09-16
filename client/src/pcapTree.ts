@@ -4,6 +4,10 @@ import path = require('path');
 import { executeSuricata } from './suricata';
 
 /**
+ * Extenssions for pcap files
+ */
+const PCAP_FILE_EXTENSSIONS = ["pcap", "pcapng", "cap"];
+/**
  * Each item in the tree has a unique ID, which is incremented for each addition
  */
 let ID = 0;
@@ -130,7 +134,10 @@ export class PcapProvider implements vscode.TreeDataProvider<PcapTreeItem>, vsco
 		const userResponse = await vscode.window.showOpenDialog({
 			canSelectMany: true,
 			title: "Please select the pcap files you wish to add",
-			filters: { "Pcap files": ["pcap", "pcapng", "cap"] }
+			filters: {
+				"Pcap files": PCAP_FILE_EXTENSSIONS,
+				"any": ["*"]
+			}
 		});
 		userResponse.forEach(file => {
 			// check if the file is already added
@@ -251,7 +258,7 @@ export class PcapProvider implements vscode.TreeDataProvider<PcapTreeItem>, vsco
 			// First extract the string
 			const urlListString: string = urlList.value;
 			// The individual paths are all represented in a string, separated by `\r\n`. For example "Path\\1\r\nPath\\2"
-			const items: vscode.Uri[] = urlListString.split("\r\n").map(uriString => vscode.Uri.parse(uriString));
+			const items: vscode.Uri[] = urlListString.split("\r\n").map(uriString => vscode.Uri.parse("file:\\\\" + uriString));
 
 			items.forEach(uriItem => {
 				// For now you can only add items to the root element (aka when target it undefined)
@@ -284,7 +291,7 @@ export class PcapProvider implements vscode.TreeDataProvider<PcapTreeItem>, vsco
  */
 function getPcaps(rootPath: vscode.Uri): PcapFile[] {
 	const pcapFileNames = fs.readdirSync(rootPath.fsPath).filter(file => {
-		return file.endsWith(".pcap");
+		return PCAP_FILE_EXTENSSIONS.some(extenssion => file.endsWith(extenssion));
 	});
-	return pcapFileNames.map(file => new PcapFile(vscode.Uri.parse(path.join(rootPath.fsPath, file))));
+	return pcapFileNames.map(file => new PcapFile(vscode.Uri.parse("file:/" + path.join(rootPath.fsPath, file))));
 }
