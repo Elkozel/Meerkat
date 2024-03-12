@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import * as fs from 'fs';
-import path = require('path');
+import * as path from "path";
 import { executeSuricata } from './suricata';
 
 /**
