@@ -55,10 +55,10 @@ pub fn get_completion(
     //     Uncompleted::Other => {}
     // }
     // Generate completion tokens (old way)
-    if line_text.get_char(col - 1)? == '$' {
+    if col > 0 && line_text.get_char(col - 1)? == '$' {
         NetworkAddress::get_completion(&address_variables, &port_variables, &mut completion_tokens);
         NetworkPort::get_completion(&address_variables, &port_variables, &mut completion_tokens);
-    } else if line_text.get_char(col - 2)? == ';' || line_text.get_char(col - 1)? == '(' {
+    } else if col > 1 && line_text.get_char(col - 2)? == ';' || line_text.get_char(col - 1)? == '(' {
         get_completion_for_option_keywords(keywords, &mut completion_tokens);
     } else {
     }

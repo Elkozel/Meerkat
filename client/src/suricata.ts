@@ -2,8 +2,7 @@ import * as path from 'path';
 import { workspace, window, Uri, ViewColumn, TextDocument, StatusBarAlignment, commands, ProgressOptions, ProgressLocation, Progress } from 'vscode';
 import * as os from "node:os";
 import * as fs from "node:fs";
-import which = require('which');
-import util = require('util');
+import * as util from "util";
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const exec = util.promisify(require('child_process').exec);
 
@@ -132,7 +131,6 @@ export interface SuricataInfo {
 }
 export async function getSuricataInfo(): Promise<SuricataInfo | null> {
 	try {
-		which.sync('suricata'); // see if suricata is installed
 		const { stdout, stderr } = await exec("suricata -V");
 		/*
 			18/5/2023 -- 22:36:55 - <Info> - Running as service: no 
