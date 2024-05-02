@@ -246,7 +246,7 @@ impl LogMessage {
             .then(SuricataErrorCode::parser().or_not())
             .then_ignore(dash.or_not())
             .then(take_until(
-                text::newline::<Simple<char>>().or(end::<Simple<char>>()),
+                text::newline::<char, Simple<char>>().or(end::<Simple<char>>()),
             ))
             .map(
                 |(((timestamp, log_level), err_code), (message, _))| LogMessage {

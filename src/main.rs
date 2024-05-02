@@ -50,6 +50,7 @@ impl LanguageServer for Backend {
                     ]),
                     work_done_progress_options: Default::default(),
                     all_commit_characters: None,
+                    completion_item: None
                 }),
                 workspace: Some(WorkspaceServerCapabilities {
                     workspace_folders: Some(WorkspaceFoldersServerCapabilities {
