@@ -5,8 +5,6 @@
 
 import * as path from 'path';
 import { workspace, ExtensionContext, window, commands, Uri, TextDocument } from 'vscode';
-import * as os from "node:os";
-import * as fs from "node:fs";
 
 import {
 	Executable,
@@ -14,7 +12,7 @@ import {
 	LanguageClientOptions,
 	ServerOptions
 } from 'vscode-languageclient/node';
-import { PcapFile, PcapProvider } from './pcapTree';
+import { PcapProvider } from './pcapTree';
 import { executeSuricata } from "./suricata";
 import { SuricataStatusBar } from './statusBar';
 

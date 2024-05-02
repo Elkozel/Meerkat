@@ -14,13 +14,11 @@
 	},
 	"dependencies": {
 		"path": "^0.12.7",
-		"vscode-languageclient": "^7.0.0",
-		"which": "^3.0.1"
+		"vscode-languageclient": "^7.0.0"
 	},
 	"devDependencies": {
 		"@types/node": "^18.17.17",
 		"@types/vscode": "^1.63.0",
-		"@types/which": "^3.0.0",
 		"@vscode/test-electron": "^2.3.4"
 	}
 }
