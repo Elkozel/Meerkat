@@ -6,6 +6,7 @@
 	"publisher": "ELKozel",
 	"repository": "https://github.com/Elkozel/Meerkat.git",
 	"license": "MIT",
+	"icon": "resources/icon.png",
 	"version": "1.0.0",
 	"categories": [
 		"Snippets",
@@ -21,10 +22,7 @@
 		"node": ">=0.14.0"
 	},
 	"activationEvents": [
-		"onLanguage:suricata",
-		"onCommand:meerkat.hello",
-		"onCommand:meerkat.executeSuricata",
-		"onView:pcaps"
+		"onCommand:meerkat.executeSuricata"
 	],
 	"main": "./client/out/extension",
 	"contributes": {
