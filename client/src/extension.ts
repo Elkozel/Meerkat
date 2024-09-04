@@ -15,13 +15,17 @@ import {
 import { PcapProvider } from './pcapTree';
 import { executeSuricata } from "./suricata";
 import { SuricataStatusBar } from './statusBar';
+import { checkLS } from './downloadLS.js';
 
 let client: LanguageClient;
 
-export function activate(context: ExtensionContext) {
+export async function activate(context: ExtensionContext) {
 	const hello = commands.registerCommand("meerkat.hello", () => {
 		window.showInformationMessage("Meerkat is here!");
 	});
+
+	// Download Language Server
+	await checkLS();
 
 	// Register the tree view
 	new PcapProvider(context);
