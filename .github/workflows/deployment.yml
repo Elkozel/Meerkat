@@ -83,22 +83,20 @@ jobs:
         with:
           name: server
           path: server/*
-      - name: Fetch version from cargo
-        id: fetch-version
+      - id: fetch-version
+        name: Fetch version from cargo
         run: |
           sed -i "s/0.0.0/$VERSION/g" Cargo.toml
           echo "RELEASE_VERSION=$VERSION" >> "$GITHUB_OUTPUT"
       - name: Upload to release
         uses: softprops/action-gh-release@v2
-        env:
-          RELEASE_VERSION: ${{ steps.fetch-version.outputs.RELEASE_VERSION }}
         with:
           token: ${{ secrets.RELEASE_TOKEN }}
           generate_release_notes: true
           make_latest: true
           append_body: true
-          tag_name: $RELEASE_VERSION
-          name: "Version $RELEASE_VERSION"
+          tag_name: ${{ steps.fetch-version.outputs.RELEASE_VERSION }}
+          name: "Version ${{ steps.fetch-version.outputs.RELEASE_VERSION }}"
           files: |
             server/*
             ./*.vsix
