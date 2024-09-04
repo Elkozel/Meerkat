@@ -87,6 +87,7 @@ jobs:
         name: Fetch version from cargo
         run: |
           sed -i "s/0.0.0/$VERSION/g" Cargo.toml
+          echo "Version is $VERSION"
           echo "RELEASE_VERSION=$VERSION" >> "$GITHUB_OUTPUT"
       - name: Upload to release
         uses: softprops/action-gh-release@v2
