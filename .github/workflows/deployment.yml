@@ -94,12 +94,11 @@ jobs:
           RELEASE_VERSION: ${{ steps.fetch-version.outputs.RELEASE_VERSION }}
         with:
           token: ${{ secrets.RELEASE_TOKEN }}
-          draft: true
           generate_release_notes: true
           make_latest: true
           append_body: true
           tag_name: $RELEASE_VERSION
-          name: Version $RELEASE_VERSION
+          name: "Version $RELEASE_VERSION"
           files: |
             server/*
             ./*.vsix
