@@ -2,7 +2,7 @@ name: Deploying extension
 
 on:
   push:
-    branches: [ "main", "smart-download"]
+    branches: [ "main"]
   workflow_dispatch:
 
 jobs:
