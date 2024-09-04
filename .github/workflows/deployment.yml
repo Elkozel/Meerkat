@@ -1,8 +1,8 @@
-name: Deploying extenssion
+name: Deploying extension
 
 on:
   push:
-    branches: [ "main" ]
+    branches: [ "main", "smart-download"]
   workflow_dispatch:
 
 jobs:
@@ -57,7 +57,7 @@ jobs:
           name: server
           path: target/${{ matrix.target }}/release/meerkat*
   compile-client:
-    name: Deploy-extenssion
+    name: Deploy-extension
     needs: [compile-server, check-client]
     runs-on: ubuntu-latest
     steps: 
@@ -73,12 +73,17 @@ jobs:
           path: server/
       - name: Packaging extenssion
         run: npx vsce package
-      - name: Uploading artifacts
+      - name: Uploading extension
         uses: actions/upload-artifact@v3
         with:
-          name: extenssion
+          name: extension
           path: ./*.vsix 
-      - name: Deploying extenssion
+      - name: Uploading language server
+        uses: actions/upload-artifact@v3
+        with:
+          name: server
+          path: server/*
+      - name: Deploying extension
         run: npx vsce publish --pat ${{ secrets.MARKETPLACE_DEPLOY_TOKEN }} --target win32-x64 linux-x64
 
 
