@@ -193,5 +193,8 @@
 		"eslint": "^8.49.0",
 		"mocha": "^10.3.0",
 		"typescript": "^5.2.2"
+	},
+	"dependencies": {
+		"node-downloader-helper": "^2.1.9"
 	}
 }

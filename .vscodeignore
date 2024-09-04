@@ -17,3 +17,4 @@ client/src/**
 src
 target/**
 Cargo.*
+media
