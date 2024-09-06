@@ -7,12 +7,14 @@
 use std::collections::{HashMap, HashSet};
 
 use chumsky::Parser;
+use clap::{Parser as CP, Subcommand};
 use dashmap::DashMap;
 use meerkat_ls::completion::get_completion;
 use meerkat_ls::hover::get_hover;
 use meerkat_ls::reference::get_reference;
 use meerkat_ls::rule::{Rule, AST};
 use meerkat_ls::semantic_token::{semantic_token_from_rule, ImCompleteSemanticToken, LEGEND_TYPE};
+use meerkat_ls::server_settings::LanguageServerSettings;
 use meerkat_ls::suricata::{verify_rule, Keyword, get_keywords};
 use ropey::{Rope, RopeSlice};
 use serde::{Deserialize, Serialize};
@@ -30,6 +32,7 @@ struct Backend {
     keywords: HashMap<String, Keyword>, 
     port_variables: HashSet<String>,
     address_variables: HashSet<String>,
+    language_server_settings: LanguageServerSettings
 }
 
 #[tower_lsp::async_trait]
@@ -461,7 +464,7 @@ impl Backend {
         // Run suricata already in the background
         let suricata_process = async {
             // Get the diagnostics from Suricata
-            let diagnostics = match verify_rule(&rope).await {
+            let diagnostics = match verify_rule(&rope, &self.language_server_settings).await {
                 Ok(diagnostics) => {
                     diagnostics
                 },
@@ -521,9 +524,18 @@ impl Backend {
     }
 }
 
+#[derive(CP, Debug)]
+#[command(version, about, long_about = None)]
+struct Args {
+    /// Absolute path to the Suricata config file
+    #[arg(short, long)]
+    suricata_config: Option<String>,
+}
+
 #[tokio::main]
 async fn main() {
     env_logger::init();
+    let args = Args::parse();
 
     let stdin = tokio::io::stdin();
     let stdout = tokio::io::stdout();
@@ -536,6 +548,10 @@ async fn main() {
         },
     };
 
+    let server_settings = LanguageServerSettings{
+        suricata_config_file: args.suricata_config
+    };
+
     let (service, socket) = LspService::build(|client| Backend {
         client,
         ast_map: DashMap::new(),
@@ -544,6 +560,7 @@ async fn main() {
         keywords: keywords,
         port_variables: HashSet::new(),
         address_variables: HashSet::new(),
+        language_server_settings: server_settings
     })
     .finish();
     Server::new(stdin, stdout, socket).serve(service).await;

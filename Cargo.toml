@@ -1,6 +1,6 @@
 [package]
 name = "meerkat-ls"
-version = "1.0.0"
+version = "1.0.1"
 edition = "2021"
 authors = ["Tsvetomir Hristov"]
 
@@ -19,6 +19,7 @@ tower-lsp = "0.20"
 tokio = { version = "1", features = ["full"] }
 tempfile = "3"
 env_logger = "0.11"
+clap = { version = "4.5.17", features = ["derive"] }
 
 [dev-dependencies]
 ariadne = "0.4"
