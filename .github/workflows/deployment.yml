@@ -2,7 +2,7 @@ name: Deploying extension
 
 on:
   push:
-    branches: [ "main"]
+    branches: [main, testing-pipeline]
   workflow_dispatch:
 
 jobs:
@@ -76,7 +76,7 @@ jobs:
           generate_release_notes: true
           make_latest: true
           append_body: true
-          tag_name: ${{ steps.fetch-version.outputs.RELEASE_VERSION }}
+          tag_name: "v${{ steps.fetch-version.outputs.RELEASE_VERSION }}"
           name: "Version ${{ steps.fetch-version.outputs.RELEASE_VERSION }}"
           files: server/*
 
