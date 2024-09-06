@@ -7,6 +7,7 @@
 use std::collections::{HashMap, HashSet};
 
 use chumsky::Parser;
+use clap::{Parser as CP, Subcommand};
 use dashmap::DashMap;
 use meerkat_ls::completion::get_completion;
 use meerkat_ls::hover::get_hover;
@@ -30,6 +31,12 @@ struct Backend {
     keywords: HashMap<String, Keyword>, 
     port_variables: HashSet<String>,
     address_variables: HashSet<String>,
+    language_server_settings: LanguageServerSettings
+}
+
+#[derive(Debug)]
+struct LanguageServerSettings {
+    suricata_config_file: Option<String>
 }
 
 #[tower_lsp::async_trait]
@@ -521,9 +528,18 @@ impl Backend {
     }
 }
 
+#[derive(CP, Debug)]
+#[command(version, about, long_about = None)]
+struct Args {
+    /// Absolute path to the Suricata config file
+    #[arg(short, long)]
+    suricata_config: Option<String>,
+}
+
 #[tokio::main]
 async fn main() {
     env_logger::init();
+    let args = Args::parse();
 
     let stdin = tokio::io::stdin();
     let stdout = tokio::io::stdout();
@@ -536,6 +552,10 @@ async fn main() {
         },
     };
 
+    let server_settings = LanguageServerSettings{
+        suricata_config_file: args.suricata_config
+    };
+
     let (service, socket) = LspService::build(|client| Backend {
         client,
         ast_map: DashMap::new(),
@@ -544,6 +564,7 @@ async fn main() {
         keywords: keywords,
         port_variables: HashSet::new(),
         address_variables: HashSet::new(),
+        language_server_settings: server_settings
     })
     .finish();
     Server::new(stdin, stdout, socket).serve(service).await;
