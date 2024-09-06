@@ -7,7 +7,7 @@ on:
 
 jobs:
   check-server:
-    name: Check LSP server
+    name: Check Language Server
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v3
@@ -17,19 +17,9 @@ jobs:
       run: cargo check --verbose
     - name: Run tests for LSP server
       run: cargo test --verbose
-  check-client:
-    name: Check LSP client
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-      - name: Setup Node
-        uses: actions/setup-node@v3
-      - name: Install Dependencies
-        run: npm install
-      - name: Compile Client
-        run: npm run compile
+
   compile-server:
-    name: Compile-server
+    name: Cross compile
     needs: [check-server]
     runs-on: ubuntu-latest
     strategy:
@@ -56,29 +46,19 @@ jobs:
         with:
           name: server
           path: target/${{ matrix.target }}/release/meerkat*
-  compile-client:
-    name: Deploy-extension
-    needs: [compile-server, check-client]
+  
+  deploy-release:
+    name: Deploy and Release
+    needs: [compile-server]
     runs-on: ubuntu-latest
     steps: 
       - uses: actions/checkout@v3
-      - name: Show folders
-        run: ls -R
-      - name: Installing NPM
-        run: npm install
-      - name: Downloading server
+      - name: Download server
         uses: actions/download-artifact@v3
         with: 
           name: server
           path: server/
-      - name: Packaging extenssion
-        run: npx vsce package
-      - name: Uploading extension
-        uses: actions/upload-artifact@v3
-        with:
-          name: extension
-          path: ./*.vsix 
-      - name: Uploading language server
+      - name: Upload language server
         uses: actions/upload-artifact@v3
         with:
           name: server
@@ -98,11 +78,7 @@ jobs:
           append_body: true
           tag_name: ${{ steps.fetch-version.outputs.RELEASE_VERSION }}
           name: "Version ${{ steps.fetch-version.outputs.RELEASE_VERSION }}"
-          files: |
-            server/*
-            ./*.vsix
-      - name: Deploying extension
-        run: npx vsce publish --pat ${{ secrets.MARKETPLACE_DEPLOY_TOKEN }} --target win32-x64 linux-x64
+          files: server/*
 
 
   
