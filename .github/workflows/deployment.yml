@@ -2,7 +2,7 @@ name: Deploying extension
 
 on:
   push:
-    branches: [main, testing-pipeline]
+    branches: [main]
   workflow_dispatch:
 
 jobs:
