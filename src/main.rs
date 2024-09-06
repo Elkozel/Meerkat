@@ -14,6 +14,7 @@ use meerkat_ls::hover::get_hover;
 use meerkat_ls::reference::get_reference;
 use meerkat_ls::rule::{Rule, AST};
 use meerkat_ls::semantic_token::{semantic_token_from_rule, ImCompleteSemanticToken, LEGEND_TYPE};
+use meerkat_ls::server_settings::LanguageServerSettings;
 use meerkat_ls::suricata::{verify_rule, Keyword, get_keywords};
 use ropey::{Rope, RopeSlice};
 use serde::{Deserialize, Serialize};
@@ -32,11 +33,6 @@ struct Backend {
     port_variables: HashSet<String>,
     address_variables: HashSet<String>,
     language_server_settings: LanguageServerSettings
-}
-
-#[derive(Debug)]
-struct LanguageServerSettings {
-    suricata_config_file: Option<String>
 }
 
 #[tower_lsp::async_trait]
@@ -468,7 +464,7 @@ impl Backend {
         // Run suricata already in the background
         let suricata_process = async {
             // Get the diagnostics from Suricata
-            let diagnostics = match verify_rule(&rope).await {
+            let diagnostics = match verify_rule(&rope, &self.language_server_settings).await {
                 Ok(diagnostics) => {
                     diagnostics
                 },
