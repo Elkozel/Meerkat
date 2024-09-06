@@ -1,83 +1,20 @@
 # Meerkat
 
-Suricata/Snort formatter extension for VS Code
-
-## Features
-Meerkat provides the following features:
-- Syntax highlighting
-### Signature checking with suricata
-![Signature checking example](./media/Errors.gif)
-
-### Signature formatting
-![Signature formatting example](./media/auto-format.gif)
-*The Auto-formatting uses the default hotkeys in your code editor*
-
-### Hover information
-![Hover information example](./media/hover.gif)
-
-### Variable references/renaiming
-![Variable renaiming example](./media/rename.gif)
-*The rename feature uses the default hotkeys in your code editor*
-
-### Code completion
-![Code completion example](./media/suggestion.gif)
-
-### Code snipplets
-![Code completion example](./media/snippets.gif)
-
-### PCAP Testing
-![Code completion example](./media/open_and_execute.gif)
-
-**Warning:** pcap visualization only works if additional third party extenssions are installed. Please install one of the available extenssions to be able to open pcap files in VS Code.
-
-- Rule linting (TOOD)
-- Rule performance statistics (TODO)
-
-## Structure
-Meerkat consists of three parts:
-- Parser: powered by chumsky, the signature parser promises high-speed and high-reliability signature parser.
-- Server logic: once a rule is parsed, it is analyzed to provide useful debugging and linting information to the user.
-- Language server: the tower framework is used to create a language server, which can be used by any text editor, which [supports the LSP](https://microsoft.github.io/language-server-protocol/implementors/tools/).
+Suricata Language Server
 
 ## How to install it
-
-### Linux/Mac
-Install cargo, if you have not done already:
+To install the language server:
 ```bash
-npm run install-rust
-```
-*You will be propted to accept the default configuration*
+git clone https://github.com/Elkozel/Meerkat.git
+cd meerkat
 
-Install all dependencies for the project:
-```bash
-npm install
+cargo install
 ```
 
-Package the extenssion:
-```bash
-npx vsce package
+once installed, the binary is saved in `$HOME/.cargo/bin` and can be run with the following command:
 ```
-*The script will also install the meerkat language server for you*
-
-At the end you should have a file named meerkat.vsix, which can be opened by VSCode
-
-### Windows
-**Make sure you have rust installed!**
-
-Install all dependencies for the project:
-```bash
-npm install
+meerkat
 ```
-Package the extenssion:
-```bash
-npx vsce package
-```
-*The script will also install the meerkat language server for you*
-
-At the end you should have a file named meerkat.vsix, which can be opened by VSCode
-
-## Updating
-Following the installation steps and opening the .vsix file with VSCode should be enough to update the extenssion.
 
 ## Suricata signatures
 
@@ -134,15 +71,6 @@ cargo doc --open
 
 
 ## Installation troubleshooting
-### Unexpected token '?'
-If you get the following error:
-```
-SyntaxError: Unexpected token '?'
-    at wrapSafe (internal/modules/cjs/loader.js:915:16)
-    at Module._compile (internal/modules/cjs/loader.js:963:27)
-```
-The issue is most probably the version of the Node that you're using.
-
 
 ### Linker 'cc' not found
 If you get the following error:
@@ -157,10 +85,3 @@ Try the following solution:
 ```
 sudo apt install build-essential
 ```
-
-### Vulnerabilities, while installing with npm
-The issue is most probably related to the version of npm used. Try updating npm:
-```
-npm update
-```
-This command should tell you if you have an older version of npm and give you the line you need to run to update it

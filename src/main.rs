@@ -8,12 +8,12 @@ use std::collections::{HashMap, HashSet};
 
 use chumsky::Parser;
 use dashmap::DashMap;
-use meerkat::completion::{get_completion};
-use meerkat::hover::get_hover;
-use meerkat::reference::get_reference;
-use meerkat::rule::{Rule, AST};
-use meerkat::semantic_token::{semantic_token_from_rule, ImCompleteSemanticToken, LEGEND_TYPE};
-use meerkat::suricata::{verify_rule, Keyword, get_keywords};
+use meerkat_ls::completion::get_completion;
+use meerkat_ls::hover::get_hover;
+use meerkat_ls::reference::get_reference;
+use meerkat_ls::rule::{Rule, AST};
+use meerkat_ls::semantic_token::{semantic_token_from_rule, ImCompleteSemanticToken, LEGEND_TYPE};
+use meerkat_ls::suricata::{verify_rule, Keyword, get_keywords};
 use ropey::{Rope, RopeSlice};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
