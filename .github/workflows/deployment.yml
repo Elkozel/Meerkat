@@ -1,13 +1,13 @@
-name: Deploying extenssion
+name: Deploying extension
 
 on:
   push:
-    branches: [ "main" ]
+    branches: [main]
   workflow_dispatch:
 
 jobs:
   check-server:
-    name: Check LSP server
+    name: Check Language Server
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v3
@@ -17,19 +17,9 @@ jobs:
       run: cargo check --verbose
     - name: Run tests for LSP server
       run: cargo test --verbose
-  check-client:
-    name: Check LSP client
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-      - name: Setup Node
-        uses: actions/setup-node@v3
-      - name: Install Dependencies
-        run: npm install
-      - name: Compile Client
-        run: npm run compile
+
   compile-server:
-    name: Compile-server
+    name: Cross compile
     needs: [check-server]
     runs-on: ubuntu-latest
     strategy:
@@ -56,30 +46,39 @@ jobs:
         with:
           name: server
           path: target/${{ matrix.target }}/release/meerkat*
-  compile-client:
-    name: Deploy-extenssion
-    needs: [compile-server, check-client]
+  
+  deploy-release:
+    name: Deploy and Release
+    needs: [compile-server]
     runs-on: ubuntu-latest
     steps: 
       - uses: actions/checkout@v3
-      - name: Show folders
-        run: ls -R
-      - name: Installing NPM
-        run: npm install
-      - name: Downloading server
+      - name: Download server
         uses: actions/download-artifact@v3
         with: 
           name: server
           path: server/
-      - name: Packaging extenssion
-        run: npx vsce package
-      - name: Uploading artifacts
+      - name: Upload language server
         uses: actions/upload-artifact@v3
         with:
-          name: extenssion
-          path: ./*.vsix 
-      - name: Deploying extenssion
-        run: npx vsce publish --pat ${{ secrets.MARKETPLACE_DEPLOY_TOKEN }} --target win32-x64 linux-x64
+          name: server
+          path: server/*
+      - id: fetch-version
+        name: Fetch version from cargo
+        run: |
+          RELEASE_VERSION=$(grep -oP '(\d+\.\d+\.\d+)' Cargo.toml | head -n 1)
+          echo "Version is $RELEASE_VERSION"
+          echo "RELEASE_VERSION=$RELEASE_VERSION" >> "$GITHUB_OUTPUT"
+      - name: Upload to release
+        uses: softprops/action-gh-release@v2
+        with:
+          token: ${{ secrets.RELEASE_TOKEN }}
+          generate_release_notes: true
+          make_latest: true
+          append_body: true
+          tag_name: "v${{ steps.fetch-version.outputs.RELEASE_VERSION }}"
+          name: "Version ${{ steps.fetch-version.outputs.RELEASE_VERSION }}"
+          files: server/*
 
 
   

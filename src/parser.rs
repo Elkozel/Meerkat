@@ -284,7 +284,7 @@ impl RuleOption {
         let escaped_chars = one_of::<_, _, Simple<char>>("\";\\").delimited_by(just("\\"), empty());
         let unescaped_value = escaped_chars
             .clone()
-            .or(none_of::<_, _, Simple<char>>(";, "))
+            .or(none_of::<_, _, Simple<char>>(";,"))
             .repeated()
             .collect::<String>()
             .map_with_span(|options, span: Span| {

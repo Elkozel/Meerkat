@@ -17,18 +17,23 @@ use chumsky::{
 use csv::ReaderBuilder;
 use ropey::Rope;
 use serde::Deserialize;
-use std::path::Path;
+use std::{ops::DerefMut, path::Path};
 use std::{collections::HashMap, error::Error};
 use tempfile::{tempdir, NamedTempFile};
 use tokio::process::Command;
 use tower_lsp::lsp_types::{Diagnostic, DiagnosticSeverity, Position, Range};
 
+use crate::server_settings::LanguageServerSettings;
+
 /// Verify a list of rules
-pub async fn verify_rule(rope: &Rope) -> Result<Vec<Diagnostic>, Box<dyn Error>> {
+pub async fn verify_rule(
+    rope: &Rope,
+    ls_settings: &LanguageServerSettings,
+) -> Result<Vec<Diagnostic>, Box<dyn Error>> {
     let temp_dir = tempdir()?;
     let tempfile = NamedTempFile::new_in(&temp_dir)?;
     rope.write_to(&tempfile)?;
-    let log_file = get_process_output(tempfile.path(), temp_dir.path()).await?;
+    let log_file = get_process_output(tempfile.path(), temp_dir.path(), ls_settings).await?;
     tempfile.close()?;
     let logs = LogMessage::parse_logs().parse(log_file);
 
@@ -93,21 +98,43 @@ pub async fn verify_rule(rope: &Rope) -> Result<Vec<Diagnostic>, Box<dyn Error>>
 }
 
 /// Gets the output that Suricata produced and returns it as a String
-async fn get_process_output(rule_file: &Path, log_path: &Path) -> Result<String, Box<dyn Error>> {
+async fn get_process_output(
+    rule_file: &Path,
+    log_path: &Path,
+    ls_settings: &LanguageServerSettings,
+) -> Result<String, Box<dyn Error>> {
     // Execute suricata
     // -S loaded exclusively
+    let rule_file_str = rule_file.display().to_string();
     // -l log directory (maybe)
+    let log_path_str = log_path.display().to_string();
     // -r pcap offline mode
-    let suricata_process = Command::new("suricata")
-        .args([
+    // -c Path to configuration file
+    let configuration_str = ls_settings.suricata_config_file.clone().unwrap_or(String::from(""));
+
+    let args: Vec<&str> = if ls_settings.suricata_config_file.is_some() {
+
+        vec![
+        "-S",
+        rule_file_str.as_str(),
+        "-l",
+        log_path_str.as_str(),
+        "--engine-analysis",
+        "-c",
+        configuration_str.as_str()
+    ]
+    }
+    else {
+        vec![
             "-S",
-            rule_file.display().to_string().as_str(),
+            rule_file_str.as_str(),
             "-l",
-            log_path.display().to_string().as_str(),
-            "--engine-analysis",
-        ])
-        .output()
-        .await?;
+            log_path_str.as_str(),
+            "--engine-analysis"
+        ]
+    };
+
+    let suricata_process = Command::new("suricata").args(args).output().await?;
 
     // Get the output from the command
     let log_file = String::from_utf8(suricata_process.stderr)?;
