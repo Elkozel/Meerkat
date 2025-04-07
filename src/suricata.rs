@@ -110,7 +110,7 @@ async fn get_process_output(
     let log_path_str = log_path.display().to_string();
     // -r pcap offline mode
     // -c Path to configuration file
-    let configuration_str = ls_settings.suricata_config_file.clone().unwrap_or(String::from(""));
+    let configuration_str = ls_settings.suricata_config_file.as_deref().unwrap_or("");
 
     let mut args = vec![];
     // Add the Rules file
@@ -123,7 +123,6 @@ async fn get_process_output(
 
     // Enable engine analysis
     args.push("--engine-analysis");
-
     // Add the config file if defined
     if let Some(config) = ls_settings.suricata_config_file.as_deref() {
         args.push("-c");
@@ -131,7 +130,7 @@ async fn get_process_output(
     }
     
     // Run suricata
-    let suricata_command = ls_settings.suricata_command_location.or_else("suricata");
+    let suricata_command = ls_settings.suricata_command_location.as_deref().unwrap_or("suricata");
     let suricata_process = Command::new(suricata_command).args(args).output().await?;
 
     // Get the output from the command
