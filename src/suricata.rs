@@ -110,31 +110,28 @@ async fn get_process_output(
     let log_path_str = log_path.display().to_string();
     // -r pcap offline mode
     // -c Path to configuration file
-    let configuration_str = ls_settings.suricata_config_file.clone().unwrap_or(String::from(""));
+    let configuration_str = ls_settings.suricata_config_file.as_deref().unwrap_or("");
 
-    let args: Vec<&str> = if ls_settings.suricata_config_file.is_some() {
+    let mut args = vec![];
+    // Add the Rules file
+    args.push("-S");
+    args.push(rule_file_str.as_str());
 
-        vec![
-        "-S",
-        rule_file_str.as_str(),
-        "-l",
-        log_path_str.as_str(),
-        "--engine-analysis",
-        "-c",
-        configuration_str.as_str()
-    ]
+    // Add the log dir path
+    args.push("-l");
+    args.push(log_path_str.as_str());
+
+    // Enable engine analysis
+    args.push("--engine-analysis");
+    // Add the config file if defined
+    if let Some(config) = ls_settings.suricata_config_file.as_deref() {
+        args.push("-c");
+        args.push(config);
     }
-    else {
-        vec![
-            "-S",
-            rule_file_str.as_str(),
-            "-l",
-            log_path_str.as_str(),
-            "--engine-analysis"
-        ]
-    };
-
-    let suricata_process = Command::new("suricata").args(args).output().await?;
+    
+    // Run suricata
+    let suricata_command = ls_settings.suricata_command_location.as_deref().unwrap_or("suricata");
+    let suricata_process = Command::new(suricata_command).args(args).output().await?;
 
     // Get the output from the command
     let log_file = String::from_utf8(suricata_process.stderr)?;

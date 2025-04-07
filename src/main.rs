@@ -530,6 +530,10 @@ struct Args {
     /// Absolute path to the Suricata config file
     #[arg(short, long)]
     suricata_config: Option<String>,
+
+    /// Absolute path to the Suricata executable
+    #[arg(short, long)]
+    suricata_command: Option<String>,
 }
 
 #[tokio::main]
@@ -549,7 +553,8 @@ async fn main() {
     };
 
     let server_settings = LanguageServerSettings{
-        suricata_config_file: args.suricata_config
+        suricata_config_file: args.suricata_config,
+        suricata_command_location: args.suricata_command
     };
 
     let (service, socket) = LspService::build(|client| Backend {
